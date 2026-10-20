@@ -1,0 +1,26 @@
+{
+  "profiles": [
+    {
+      "id": "subject1-custom-mock",
+      "subject": 1,
+      "profile": "custom_mock",
+      "question_count": 100,
+      "duration_seconds": 2700,
+      "points_per_question": 1,
+      "max_score": 100,
+      "pass_score": 90,
+      "note": "Uses 100 unique random questions sampled from the imported Subject 1 bank."
+    },
+    {
+      "id": "subject4-custom-mock",
+      "subject": 4,
+      "profile": "custom_mock",
+      "question_count": 100,
+      "duration_seconds": 2700,
+      "points_per_question": 1,
+      "max_score": 100,
+      "pass_score": 90,
+      "note": "Uses 100 unique random questions sampled from the imported Subject 4 bank."
+    }
+  ]
+}
