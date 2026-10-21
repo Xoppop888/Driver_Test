@@ -8,7 +8,8 @@
     "enabled": true
   },
   "vars": {
-    "CORS_ORIGINS": "https://xoppop888.github.io"
+    "CORS_ORIGINS": "https://xoppop888.github.io",
+    "SUPABASE_URL": "https://poiechqgfesrmuvcdnal.supabase.co"
   }
   // CI provides CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN as environment variables.
   // Runtime secrets are configured separately with `wrangler secret put`.

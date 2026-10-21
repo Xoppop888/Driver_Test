@@ -70,13 +70,13 @@ Required Worker runtime variables:
 
 | Variable | Description |
 |---|---|
-| `SUPABASE_URL` | `https://<project>.supabase.co` URL |
+| `SUPABASE_URL` | Public project URL, already configured in `worker/wrangler.jsonc` as a Worker variable |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only key used for Supabase REST RPCs |
 | `CODE_PEPPER` | At least 32 random characters. Code and session hashes depend on it; rotating it invalidates outstanding codes/sessions. |
 | `ADMIN_KEY` | Long admin secret (maximum 256 chars) checked with a constant-time comparison for batch creation. |
 | `CORS_ORIGINS` | Public Worker variable configured in `worker/wrangler.jsonc`; comma-separated **exact** origins only. Wildcards are not supported. |
 
-For deployed secrets, set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CODE_PEPPER`, and `ADMIN_KEY` with `wrangler secret put <NAME>` from `worker/`; do not add secrets to `wrangler.jsonc`. `CORS_ORIGINS` is a non-secret variable in that config. Set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repository secrets only if using the optional workflow. No deployment is performed by this repository setup.
+For deployed secrets, set `SUPABASE_SERVICE_ROLE_KEY`, `CODE_PEPPER`, and `ADMIN_KEY` through Cloudflare Dashboard or `wrangler secret put <NAME>` from `worker/`; do not add secrets to `wrangler.jsonc`. `SUPABASE_URL` and `CORS_ORIGINS` are non-secret variables in that config. Set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repository secrets for the automated workflow.
 
 ## HTTP API contract
 
