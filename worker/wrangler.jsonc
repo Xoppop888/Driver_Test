@@ -10,5 +10,6 @@
   "vars": {
     "CORS_ORIGINS": "https://xoppop888.github.io"
   }
-  // Set account_id here or pass --account-id in CI. Secrets are set with `wrangler secret put`.
+  // CI provides CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN as environment variables.
+  // Runtime secrets are configured separately with `wrangler secret put`.
 }
