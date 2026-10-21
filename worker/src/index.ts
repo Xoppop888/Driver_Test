@@ -13,7 +13,7 @@ export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   CODE_PEPPER: string;
-  ADMIN_KEY: string;
+  ADMIN_KEY?: string;
   CORS_ORIGINS: string;
   /** Cloudflare Worker secret; never configure this as a public var. */
   TELEGRAM_BOT_TOKEN?: string;
@@ -102,17 +102,20 @@ function getRuntimeConfig(env: Env): RuntimeConfig {
   if (!supabaseUrl || !/^https?:\/\//.test(supabaseUrl)) {
     throw new Error("SUPABASE_URL is not configured");
   }
-  if (!env.SUPABASE_SERVICE_ROLE_KEY || !env.CODE_PEPPER || !env.ADMIN_KEY) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY || !env.CODE_PEPPER) {
     throw new Error("Worker secret is not configured");
   }
-  if (env.CODE_PEPPER.length < 32 || env.ADMIN_KEY.length > 256) {
+  // Study endpoints do not depend on the administrative key. The admin routes
+  // validate its strength separately in assertAdmin().
+  const adminKey = env.ADMIN_KEY?.trim() ?? "";
+  if (env.CODE_PEPPER.length < 32 || adminKey.length > 256) {
     throw new Error("Worker secret does not meet length requirements");
   }
   return {
     supabaseUrl,
     serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
     codePepper: env.CODE_PEPPER,
-    adminKey: env.ADMIN_KEY,
+    adminKey,
   };
 }
 
