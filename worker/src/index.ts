@@ -267,6 +267,9 @@ async function supabaseRpc<T>(config: RuntimeConfig, name: string, payload: Reco
     console.error("Supabase RPC failed", { name, status: response.status });
     throw new ApiError(502, "backend_unavailable", "The access service is temporarily unavailable.");
   }
+  // get_question_bank returns a JSONB array as a scalar RPC result. Do not
+  // mistake that array for PostgREST's SETOF response envelope.
+  if (name === "get_question_bank") return body as T;
   return unwrapRpc<T>(body);
 }
 
