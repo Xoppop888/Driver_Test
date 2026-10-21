@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Home, RotateCcw, Trophy, XCircle }
 import { useCallback, useEffect, useState } from "react";
 import { ExamTimer, ProgressBar } from "@/components/exam-timer";
 import { QuestionCard } from "@/components/question-card";
+import { UnlockButton } from "@/components/unlock-dialog";
 import { copy } from "@/lib/i18n";
 import { getExamQuestions, getQuestions, type Question, type Subject } from "@/lib/questions";
 import { useStudyStore } from "@/lib/store";
@@ -14,6 +15,7 @@ function sameAnswer(selected: number[], correct: number[]) { return selected.len
 export function ExamClient({ subject }: { subject: Subject }) {
   const language = useStudyStore((state) => state.language);
   const recordAnswer = useStudyStore((state) => state.recordAnswer);
+  const unlocked = useStudyStore((state) => state.unlocked);
   const t = copy[language];
   const [questions, setQuestions] = useState<Question[]>(() => getQuestions(subject).slice(0, 100));
   const [position, setPosition] = useState(0);
@@ -44,6 +46,10 @@ export function ExamClient({ subject }: { subject: Subject }) {
       setFinished(true);
     } else { setPosition((current) => current + 1); setSelected(answers[position + 1] ?? []); }
   };
+
+  if (!unlocked) {
+    return <div className="mx-auto max-w-[680px] px-5 pb-16 pt-14 sm:px-8"><div className="rounded-[32px] border border-[var(--line)] bg-white p-8 text-center shadow-[0_18px_60px_rgba(19,35,43,0.08)] sm:p-12"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--ink)] text-3xl text-[var(--gold)]">✦</div><h1 className="mt-7 text-4xl font-black tracking-[-0.07em]">{t.unlockTitle}</h1><p className="mx-auto mt-4 max-w-md text-sm font-semibold leading-relaxed text-[var(--muted)]">{t.unlockText}</p><div className="mt-7 flex justify-center"><UnlockButton /></div><Link href="/" className="focus-ring mt-5 inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-5 py-3 text-sm font-black"><Home size={16} /> {t.backHome}</Link></div></div>;
+  }
 
   if (finished) {
     const displayScore = finalScore ?? score;

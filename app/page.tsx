@@ -39,19 +39,21 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mt-20 animate-rise delay-1">
-          <div className="mb-5 flex items-end justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--accent)]">01 / 02</p><h2 className="mt-2 text-2xl font-black tracking-[-0.05em] sm:text-3xl">{t.chooseExam}</h2></div><div className="hidden items-center gap-2 text-xs font-bold text-[var(--muted)] sm:flex"><CheckCircle2 size={15} className="text-[#3a8960]" /> {t.bankText}</div></div>
+        <section className="mt-20">
+          <div className="mb-5"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--accent)]">01 / 03</p><h2 className="mt-2 text-2xl font-black tracking-[-0.05em] sm:text-3xl">{t.practice}</h2></div>
+          <ModeCard href="/practice/1" icon={<BookOpen size={22} />} title={t.practice} description={t.practiceDesc} meta={language === "ru" ? "Мгновенная обратная связь · прогресс сохраняется" : "Instant feedback · progress is saved"} />
+        </section>
+
+        <section className="mt-16">
+          <div className="mb-5"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--accent)]">02 / 03</p><h2 className="mt-2 text-2xl font-black tracking-[-0.05em] sm:text-3xl">{t.mockExam}</h2></div>
+          <ModeCard href="/exam/1" icon={<Clock3 size={22} />} title={t.mockExam} description={t.mockExamDesc} meta={language === "ru" ? "100 вопросов · 45 минут · код для доступа" : "100 questions · 45 minutes · access code"} dark />
+        </section>
+
+        <section className="mt-16">
+          <div className="mb-5 flex items-end justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--accent)]">03 / 03</p><h2 className="mt-2 text-2xl font-black tracking-[-0.05em] sm:text-3xl">{t.chooseExam}</h2></div><div className="hidden items-center gap-2 text-xs font-bold text-[var(--muted)] sm:flex"><CheckCircle2 size={15} className="text-[#3a8960]" /> {t.bankText}</div></div>
           <div className="grid gap-4 lg:grid-cols-2">
             <ExamChoice subject={1} count={subject1.length} title={t.subject1} description={t.subject1Desc} accent="coral" />
             <ExamChoice subject={4} count={subject4.length} title={t.subject4} description={t.subject4Desc} accent="mint" />
-          </div>
-        </section>
-
-        <section className="mt-16 animate-rise delay-2">
-          <div className="mb-5"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--accent)]">02 / 02</p><h2 className="mt-2 text-2xl font-black tracking-[-0.05em] sm:text-3xl">{language === "ru" ? "Выберите ритм" : "Choose your pace"}</h2></div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <ModeCard href="/practice/1" icon={<BookOpen size={22} />} title={t.practice} description={t.practiceDesc} meta={language === "ru" ? "Мгновенная обратная связь" : "Instant feedback"} />
-            <ModeCard href="/exam/1" icon={<Clock3 size={22} />} title={t.mockExam} description={t.mockExamDesc} meta={language === "ru" ? "Без подсказок до финала" : "No feedback until the end"} dark />
           </div>
         </section>
       </div>
@@ -66,5 +68,5 @@ function ExamChoice({ subject, count, title, description, accent }: { subject: 1
 }
 
 function ModeCard({ href, icon, title, description, meta, dark = false }: { href: string; icon: React.ReactNode; title: string; description: string; meta: string; dark?: boolean }) {
-  return <Link href={href} className={`focus-ring group relative overflow-hidden rounded-[26px] border p-6 transition-all hover:-translate-y-1 sm:p-8 ${dark ? "border-[var(--ink)] bg-[var(--ink)] text-white shadow-[8px_8px_0_var(--gold)]" : "border-[var(--line)] bg-white hover:shadow-[0_18px_40px_rgba(19,35,43,0.08)]"}`}><div className="flex items-center justify-between"><span className={`grid h-12 w-12 place-items-center rounded-2xl ${dark ? "bg-white/10 text-[var(--gold)]" : "bg-[var(--soft-accent)] text-[var(--accent)]"}`}>{icon}</span><ArrowRight size={20} className="transition-transform group-hover:translate-x-1" /></div><h3 className="mt-9 text-2xl font-black tracking-[-0.05em]">{title}</h3><p className={`mt-2 max-w-sm text-sm font-semibold leading-relaxed ${dark ? "text-white/60" : "text-[var(--muted)]"}`}>{description}</p><div className={`mt-8 text-[10px] font-black uppercase tracking-[0.16em] ${dark ? "text-[var(--gold)]" : "text-[var(--accent)]"}`}>{meta}</div></Link>;
+  return <Link href={href} className={`focus-ring group relative block w-full overflow-hidden rounded-[26px] border p-6 transition-all hover:-translate-y-1 sm:p-8 ${dark ? "border-[var(--ink)] bg-[var(--ink)] text-white shadow-[8px_8px_0_var(--gold)]" : "border-[var(--line)] bg-white hover:shadow-[0_18px_40px_rgba(19,35,43,0.08)]"}`}><div className="flex items-center justify-between"><span className={`grid h-12 w-12 place-items-center rounded-2xl ${dark ? "bg-white/10 text-[var(--gold)]" : "bg-[var(--soft-accent)] text-[var(--accent)]"}`}>{icon}</span><ArrowRight size={20} className="transition-transform group-hover:translate-x-1" /></div><h3 className="mt-9 text-2xl font-black tracking-[-0.05em]">{title}</h3><p className={`mt-2 max-w-sm text-sm font-semibold leading-relaxed ${dark ? "text-white/60" : "text-[var(--muted)]"}`}>{description}</p><div className={`mt-8 text-[10px] font-black uppercase tracking-[0.16em] ${dark ? "text-[var(--gold)]" : "text-[var(--accent)]"}`}>{meta}</div></Link>;
 }

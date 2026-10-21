@@ -50,6 +50,8 @@ jobs:
 
       - name: Build static export
         run: pnpm build
+        env:
+          NEXT_PUBLIC_UNLOCK_CODE: ${{ secrets.DRIVEPREP_UNLOCK_CODE }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

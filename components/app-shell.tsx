@@ -6,6 +6,7 @@ import { ArrowUpRight, BookOpenCheck, CircleAlert, Languages } from "lucide-reac
 import { useStudyStore } from "@/lib/store";
 import { copy } from "@/lib/i18n";
 import { LanguageToggle } from "./language-toggle";
+import { UnlockButton } from "./unlock-dialog";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,6 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <CircleAlert size={15} /> {t.navMistakes}
               </Link>
             </nav>
+            <UnlockButton compact />
             <LanguageToggle />
           </div>
         </div>

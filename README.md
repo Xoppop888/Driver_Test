@@ -10,6 +10,7 @@
 - Practice с мгновенной проверкой, объяснением и поддержкой true/false, single-choice и multiple-choice.
 - Mock Exam на 100 уникальных случайных вопросов, 45 минут и проходной балл 90/100.
 - MistakeTracker, язык и прогресс сохраняются в `localStorage`.
+- MVP freemium-gate: без кода доступно 20 вопросов Practice, а Mock Exam закрыт; код сохраняется на устройстве.
 - Полная локальная структура данных в `data/questions.json`.
 
 ## Локальный запуск
@@ -29,6 +30,20 @@ pnpm build
 ```
 
 После `pnpm build` статический результат находится в `out/`.
+
+## MVP-код доступа
+
+Сейчас разблокировка сделана без backend, чтобы быстро проверить freemium-сценарий. Значение по умолчанию — `DRIVEPREP-2026`. Для сборки с другим кодом задайте переменную `NEXT_PUBLIC_UNLOCK_CODE`:
+
+```bash
+NEXT_PUBLIC_UNLOCK_CODE="YOUR-CODE" pnpm build
+```
+
+В GitHub Actions её можно передать из repository secret. Это только UX-gate: значение `NEXT_PUBLIC_*` попадает в браузерный bundle, а полный JSON всё ещё можно технически скачать из статического сайта. Для реальной оплаты и защиты полного банка нужно вынести premium-вопросы на backend, добавить users/orders и выдавать entitlement после подтверждённого webhook от платёжного провайдера.
+
+Чтобы использовать собственный код в GitHub Pages, откройте **Settings → Secrets and variables → Actions → New repository secret**, создайте secret с именем `DRIVEPREP_UNLOCK_CODE` и запустите workflow заново. Workflow передаст его в static build. Если secret не задан, для локальной демонстрации используется `DRIVEPREP-2026`.
+
+Practice сохраняет последнюю позицию отдельно для Subject 1 и Subject 4 в `localStorage`. После обновления страницы пользователь возвращается к последнему вопросу.
 
 ## CI/CD
 
