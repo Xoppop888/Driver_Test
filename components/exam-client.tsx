@@ -5,7 +5,6 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Home, RotateCcw, Trophy, XCircle }
 import { useCallback, useEffect, useState } from "react";
 import { ExamTimer, ProgressBar } from "@/components/exam-timer";
 import { QuestionCard } from "@/components/question-card";
-import { UnlockButton } from "@/components/unlock-dialog";
 import { copy } from "@/lib/i18n";
 import { getExamQuestions, getQuestions, type Question, type Subject } from "@/lib/questions";
 import { useStudyStore } from "@/lib/store";
@@ -17,7 +16,7 @@ export function ExamClient({ subject }: { subject: Subject }) {
   const recordAnswer = useStudyStore((state) => state.recordAnswer);
   const unlocked = useStudyStore((state) => state.unlocked);
   const t = copy[language];
-  const [questions, setQuestions] = useState<Question[]>(() => getQuestions(subject).slice(0, 100));
+  const [questions, setQuestions] = useState<Question[]>(() => getQuestions(subject).slice(0, 50));
   const [position, setPosition] = useState(0);
   const [selected, setSelected] = useState<number[]>([]);
   const [answers, setAnswers] = useState<Record<number, number[]>>({});
@@ -26,8 +25,8 @@ export function ExamClient({ subject }: { subject: Subject }) {
   const [finalScore, setFinalScore] = useState<number | null>(null);
 
   useEffect(() => {
-    setQuestions(getExamQuestions(subject, 100));
-  }, [subject]);
+    setQuestions(getExamQuestions(subject, unlocked ? 100 : 50));
+  }, [subject, unlocked]);
 
   const finishExam = useCallback(() => setFinished(true), []);
   const question = questions[position];
@@ -47,10 +46,6 @@ export function ExamClient({ subject }: { subject: Subject }) {
     } else { setPosition((current) => current + 1); setSelected(answers[position + 1] ?? []); }
   };
 
-  if (!unlocked) {
-    return <div className="mx-auto max-w-[680px] px-5 pb-16 pt-14 sm:px-8"><div className="rounded-[32px] border border-[var(--line)] bg-white p-8 text-center shadow-[0_18px_60px_rgba(19,35,43,0.08)] sm:p-12"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--ink)] text-3xl text-[var(--gold)]">✦</div><h1 className="mt-7 text-4xl font-black tracking-[-0.07em]">{t.unlockTitle}</h1><p className="mx-auto mt-4 max-w-md text-sm font-semibold leading-relaxed text-[var(--muted)]">{t.unlockText}</p><div className="mt-7 flex justify-center"><UnlockButton /></div><Link href="/" className="focus-ring mt-5 inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-5 py-3 text-sm font-black"><Home size={16} /> {t.backHome}</Link></div></div>;
-  }
-
   if (finished) {
     const displayScore = finalScore ?? score;
     const passed = displayScore >= Math.ceil(questions.length * 0.9);
@@ -58,5 +53,5 @@ export function ExamClient({ subject }: { subject: Subject }) {
   }
 
   if (!question) return null;
-  return <div className="mx-auto max-w-[900px] px-5 pb-14 pt-8 sm:px-8 sm:pt-10"><div className="flex items-center justify-between gap-4"><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"><ArrowLeft size={15} /> {t.backHome}</Link><div className="flex items-center gap-2"><ExamTimer deadline={deadline} copy={t} onExpire={finishExam} /><span className="hidden rounded-full bg-[var(--ink)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-white sm:inline">{t.examMode} · 0{subject}</span></div></div><div className="mt-9"><ProgressBar current={position + 1} total={questions.length} label={`${t.question} ${position + 1} / ${questions.length}`} /><QuestionCard question={question} language={language} copy={t} selected={selected} onSelect={choose} /><div className="mt-5 flex items-center justify-between gap-3"><span className="text-xs font-bold text-[var(--muted)]">{selected.length ? `${selected.length} ${language === "ru" ? "выбрано" : "selected"}` : t.noAnswer}</span><button type="button" onClick={next} className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5">{position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} /></button></div></div></div>;
+  return <div className="mx-auto max-w-[900px] px-5 pb-14 pt-8 sm:px-8 sm:pt-10"><div className="flex items-center justify-between gap-4"><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"><ArrowLeft size={15} /> {t.backHome}</Link><div className="flex items-center gap-2"><ExamTimer deadline={deadline} copy={t} onExpire={finishExam} /><span className="rounded-full bg-[var(--ink)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-white">{unlocked ? t.fullExam : t.freeExam} · 0{subject}</span></div></div><div className="mt-9"><ProgressBar current={position + 1} total={questions.length} label={`${t.question} ${position + 1} / ${questions.length}`} /><QuestionCard question={question} language={language} copy={t} selected={selected} onSelect={choose} /><div className="mt-5 flex items-center justify-between gap-3"><span className="text-xs font-bold text-[var(--muted)]">{selected.length ? `${selected.length} ${language === "ru" ? "выбрано" : "selected"}` : t.noAnswer}</span><button type="button" onClick={next} className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5">{position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} /></button></div></div></div>;
 }

@@ -46,7 +46,7 @@ export default function HomePage() {
 
         <section className="mt-16">
           <div className="mb-5"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--accent)]">02 / 03</p><h2 className="mt-2 text-2xl font-black tracking-[-0.05em] sm:text-3xl">{t.mockExam}</h2></div>
-          <ModeCard href="/exam/1" icon={<Clock3 size={22} />} title={t.mockExam} description={t.mockExamDesc} meta={language === "ru" ? "100 вопросов · 45 минут · код для доступа" : "100 questions · 45 minutes · access code"} dark />
+          <ModeCard href="/exam/1" icon={<Clock3 size={22} />} title={t.mockExam} description={t.mockExamDesc} meta={language === "ru" ? "50 бесплатно · 100 после разблокировки · 45 минут" : "50 free · 100 after unlock · 45 minutes"} dark />
         </section>
 
         <section className="mt-16">
