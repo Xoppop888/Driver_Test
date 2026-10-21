@@ -42,9 +42,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main>{children}</main>
-      <footer className="mx-auto flex max-w-[1240px] items-center justify-between px-5 pb-8 pt-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--muted)] sm:px-8 lg:px-10">
+      <footer className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3 px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--muted)] sm:px-8 lg:px-10">
         <span>Built for the road ahead</span>
-        <span className="flex items-center gap-1">{language === "ru" ? "Учитесь в своём ритме" : "Learn at your pace"} <ArrowUpRight size={13} /></span>
+        <div className="flex flex-wrap items-center gap-4"><Link href="/admin" className="focus-ring rounded px-1 py-2">Admin</Link><span className="flex items-center gap-1">{language === "ru" ? "Учитесь в своём ритме" : "Learn at your pace"} <ArrowUpRight size={13} /></span></div>
       </footer>
     </div>
   );

@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Home, RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, ArrowRight, Home, LoaderCircle } from "lucide-react";
+import { ProgressBar } from "@/components/exam-timer";
 import { QuestionCard } from "@/components/question-card";
 import { UnlockButton } from "@/components/unlock-dialog";
-import { ProgressBar } from "@/components/exam-timer";
+import { getQuestionSet } from "@/lib/api";
 import { copy } from "@/lib/i18n";
-import { getQuestions, type Question, type Subject } from "@/lib/questions";
+import type { Question, Subject } from "@/lib/questions";
 import { useStudyStore } from "@/lib/store";
-import { useEffect, useState } from "react";
 
 function sameAnswer(selected: number[], correct: number[]) {
   return selected.length === correct.length && selected.every((index) => correct.includes(index));
@@ -21,23 +22,41 @@ export function PracticeClient({ subject }: { subject: Subject }) {
   const clearPracticePosition = useStudyStore((state) => state.clearPracticePosition);
   const savedPosition = useStudyStore((state) => state.practicePositions[String(subject)] ?? 0);
   const unlocked = useStudyStore((state) => state.unlocked);
+  const lock = useStudyStore((state) => state.lock);
   const t = copy[language];
-  const allQuestions = getQuestions(subject);
-  const questions = unlocked ? allQuestions : allQuestions.slice(0, 20);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [resetAt, setResetAt] = useState<string | null>(null);
   const [position, setPosition] = useState(0);
   const [selected, setSelected] = useState<number[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [finished, setFinished] = useState(false);
-  const question = questions[position];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setPosition(Math.min(savedPosition, Math.max(questions.length - 1, 0)));
-  }, [savedPosition, questions.length]);
+    let active = true;
+    setLoading(true);
+    setError("");
+    getQuestionSet(subject).then((result) => {
+      if (!active) return;
+      setQuestions(result.questions);
+      setRemaining(result.remaining);
+      setResetAt(result.resetAt);
+      setPosition(Math.min(savedPosition, Math.max(result.questions.length - 1, 0)));
+      setSelected([]);
+      setSubmitted(false);
+      setFinished(false);
+    }).catch((caught: unknown) => {
+      if (!active) return;
+      if (caught && typeof caught === "object" && "status" in caught && caught.status === 401) lock();
+      setError(t.apiUnavailable);
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [subject, unlocked, savedPosition, lock, t.apiUnavailable]);
 
-  if (finished || !question) {
-    return <div className="mx-auto max-w-[760px] px-5 pb-16 pt-14 sm:px-8"><div className="rounded-[30px] border border-[var(--line)] bg-white p-8 text-center shadow-[0_18px_60px_rgba(19,35,43,0.07)] sm:p-12"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--mint)] text-3xl">✓</div><h1 className="mt-7 text-4xl font-black tracking-[-0.07em]">{language === "ru" ? "Практика завершена" : "Practice complete"}</h1><p className="mx-auto mt-4 max-w-md text-sm font-semibold leading-relaxed text-[var(--muted)]">{unlocked ? (language === "ru" ? "Хорошая работа. Ошибки сохранены в отдельном разделе для повторения." : "Good work. Your mistakes are saved in a separate section for review.") : (language === "ru" ? "Бесплатная сессия из 20 вопросов закончена. Откройте полный банк для продолжения." : "Your free 20-question session is complete. Unlock the full bank to continue.")}</p><div className="mt-8 flex flex-wrap justify-center gap-3">{!unlocked ? <UnlockButton /> : null}<Link href="/mistakes" className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3.5 text-sm font-black text-white">{t.navMistakes} <ArrowRight size={16} /></Link><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-5 py-3.5 text-sm font-black"><Home size={16} /> {t.backHome}</Link></div></div></div>;
-  }
-
+  const question = questions[position];
+  const formatReset = () => resetAt ? new Intl.DateTimeFormat(language === "ru" ? "ru-RU" : "en-US", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Shanghai" }).format(new Date(resetAt)) : null;
   const goNext = () => {
     if (position >= questions.length - 1) {
       clearPracticePosition(subject);
@@ -50,11 +69,25 @@ export function PracticeClient({ subject }: { subject: Subject }) {
     }
   };
   const select = (index: number) => {
-    if (submitted) return;
+    if (submitted || !question) return;
     if (question.type === "multiple_choice") setSelected((current) => current.includes(index) ? current.filter((item) => item !== index) : [...current, index].sort());
     else { const answer = [index]; setSelected(answer); setSubmitted(true); recordAnswer(question.id, sameAnswer(answer, question.correct_indices)); savePracticePosition(subject, position); }
   };
-  const submitMultiple = () => { setSubmitted(true); recordAnswer(question.id, sameAnswer(selected, question.correct_indices)); savePracticePosition(subject, position); };
+  const submitMultiple = () => {
+    if (!question) return;
+    setSubmitted(true);
+    recordAnswer(question.id, sameAnswer(selected, question.correct_indices));
+    savePracticePosition(subject, position);
+  };
 
-  return <div className="mx-auto max-w-[900px] px-5 pb-14 pt-8 sm:px-8 sm:pt-10"><div className="flex items-center justify-between gap-4"><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"><ArrowLeft size={15} /> {t.backHome}</Link><span className="rounded-full bg-[var(--soft-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">{t.practiceMode} · 0{subject}</span></div><div className="mt-9"><ProgressBar current={position + 1} total={questions.length} label={`${t.question} ${position + 1} / ${questions.length}`} /><QuestionCard question={question} language={language} copy={t} selected={selected} submitted={submitted} showFeedback={submitted} onSelect={select} onSubmitMulti={submitMultiple} />{submitted ? <div className="mt-5 flex justify-end"><button type="button" onClick={goNext} className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5">{position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} /></button></div> : null}</div></div>;
+  if (loading) return <div className="mx-auto flex min-h-[55vh] max-w-[760px] items-center justify-center px-5"><div className="flex items-center gap-3 text-sm font-bold text-[var(--muted)]"><LoaderCircle className="animate-spin" size={18} />{language === "ru" ? "Загружаем вопросы…" : "Loading questions…"}</div></div>;
+
+  if (error) return <div className="mx-auto max-w-[760px] px-5 pb-16 pt-14 sm:px-8"><div role="alert" className="rounded-[30px] border border-[#efc0b5] bg-white p-8 text-center"><h1 className="text-2xl font-black">{t.apiUnavailable}</h1><p className="mt-3 text-sm font-semibold text-[var(--muted)]">{error}</p><Link href="/" className="focus-ring mt-6 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3 text-sm font-black text-white"><Home size={16} />{t.backHome}</Link></div></div>;
+
+  if (finished || !question) {
+    const quotaEnded = !unlocked && remaining === 0;
+    return <div className="mx-auto max-w-[760px] px-5 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-14 sm:px-8"><div className="rounded-[30px] border border-[var(--line)] bg-white p-8 text-center shadow-[0_18px_60px_rgba(19,35,43,0.07)] sm:p-12"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--mint)] text-3xl">✓</div><h1 className="mt-7 text-4xl font-black tracking-[-0.07em]">{quotaEnded ? t.dailyLimitTitle : t.practiceComplete}</h1><p className="mx-auto mt-4 max-w-md text-sm font-semibold leading-relaxed text-[var(--muted)]">{quotaEnded ? `${t.dailyLimitText}${formatReset() ? ` ${t.dailyResetLabel} ${formatReset()} (Asia/Shanghai).` : ""}` : unlocked ? t.practiceCompleteText : t.dailyPracticeComplete}</p><div className="mt-8 flex flex-wrap justify-center gap-3">{!unlocked ? <UnlockButton /> : null}<Link href="/mistakes" className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3.5 text-sm font-black text-white">{t.navMistakes} <ArrowRight size={16} /></Link><Link href="/" className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-full border border-[var(--line)] px-5 py-3.5 text-sm font-black"><Home size={16} /> {t.backHome}</Link></div></div></div>;
+  }
+
+  return <div className="mx-auto max-w-[900px] px-5 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-8 sm:px-8 sm:pt-10"><div className="flex flex-wrap items-center justify-between gap-3"><Link href="/" className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"><ArrowLeft size={15} /> {t.backHome}</Link><span className="rounded-full bg-[var(--soft-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">{t.practiceMode} · 0{subject}</span></div><div className="mt-7 rounded-2xl bg-white/75 px-4 py-3 text-xs font-bold text-[var(--muted)]">{unlocked ? t.unlocked : `${t.dailyPack}: ${questions.length}`} {!unlocked && formatReset() ? ` · ${t.dailyResetLabel} ${formatReset()} (Asia/Shanghai)` : ""}</div><div className="mt-5"><ProgressBar current={position + 1} total={questions.length} label={`${t.question} ${position + 1} / ${questions.length}`} /><QuestionCard question={question} language={language} copy={t} selected={selected} submitted={submitted} showFeedback={submitted} onSelect={select} onSubmitMulti={submitMultiple} />{submitted ? <div className="mt-5 flex justify-end"><button type="button" onClick={goNext} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5">{position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} /></button></div> : null}</div></div>;
 }

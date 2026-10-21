@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, CheckCircle2, ChevronRight, Clock3, Flame, Gauge, Sparkles } from "lucide-react";
 import { copy } from "@/lib/i18n";
-import { getQuestions } from "@/lib/questions";
 import { useStudyStore } from "@/lib/store";
 
 export default function HomePage() {
@@ -11,8 +10,6 @@ export default function HomePage() {
   const mistakes = useStudyStore((state) => state.mistakes);
   const progress = useStudyStore((state) => state.progress);
   const t = copy[language];
-  const subject1 = getQuestions(1);
-  const subject4 = getQuestions(4);
   const completed = Object.keys(progress).length;
 
   return (
@@ -23,7 +20,7 @@ export default function HomePage() {
             <div className="mb-6 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-[var(--accent)]"><span className="h-2 w-2 rounded-full bg-[var(--accent)]" /> {t.eyebrow}</div>
             <h1 className="max-w-[780px] text-[clamp(3.15rem,8vw,7.6rem)] font-black leading-[0.88] tracking-[-0.085em] text-[var(--ink)]">{t.heroTitle}</h1>
             <p className="mt-7 max-w-xl text-base font-semibold leading-relaxed text-[var(--muted)] sm:text-lg">{t.heroText}</p>
-            <div className="mt-8 flex flex-wrap items-center gap-3 text-xs font-black uppercase tracking-[0.12em] text-[var(--muted)]"><span className="rounded-full border border-[var(--line)] bg-white px-3 py-2">RU / EN</span><span className="rounded-full border border-[var(--line)] bg-white px-3 py-2">Local-first</span><span className="rounded-full border border-[var(--line)] bg-white px-3 py-2">C1 theory</span></div>
+            <div className="mt-8 flex flex-wrap items-center gap-3 text-xs font-black uppercase tracking-[0.12em] text-[var(--muted)]"><span className="rounded-full border border-[var(--line)] bg-white px-3 py-2">RU / EN</span><span className="rounded-full border border-[var(--line)] bg-white px-3 py-2">50 / day</span><span className="rounded-full border border-[var(--line)] bg-white px-3 py-2">C1 theory</span></div>
           </div>
 
           <div className="animate-rise delay-2 relative overflow-hidden rounded-[30px] bg-[var(--ink)] p-6 text-white shadow-[14px_14px_0_var(--soft-accent)] sm:p-8">
@@ -46,14 +43,14 @@ export default function HomePage() {
 
         <section className="mt-16">
           <div className="mb-5"><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--accent)]">02 / 03</p><h2 className="mt-2 text-2xl font-black tracking-[-0.05em] sm:text-3xl">{t.mockExam}</h2></div>
-          <ModeCard href="/exam/1" icon={<Clock3 size={22} />} title={t.mockExam} description={t.mockExamDesc} meta={language === "ru" ? "50 бесплатно · 100 после разблокировки · 45 минут" : "50 free · 100 after unlock · 45 minutes"} dark />
+          <ModeCard href="/exam/1" icon={<Clock3 size={22} />} title={t.mockExam} description={t.mockExamDesc} meta={language === "ru" ? "50 ежедневно · 100 в полном режиме · 45 минут" : "50 daily · 100 in full mode · 45 minutes"} dark />
         </section>
 
         <section className="mt-16">
           <div className="mb-5 flex items-end justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--accent)]">03 / 03</p><h2 className="mt-2 text-2xl font-black tracking-[-0.05em] sm:text-3xl">{t.chooseExam}</h2></div><div className="hidden items-center gap-2 text-xs font-bold text-[var(--muted)] sm:flex"><CheckCircle2 size={15} className="text-[#3a8960]" /> {t.bankText}</div></div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <ExamChoice subject={1} count={subject1.length} title={t.subject1} description={t.subject1Desc} accent="coral" />
-            <ExamChoice subject={4} count={subject4.length} title={t.subject4} description={t.subject4Desc} accent="mint" />
+            <ExamChoice subject={1} count={100} title={t.subject1} description={t.subject1Desc} accent="coral" />
+            <ExamChoice subject={4} count={100} title={t.subject4} description={t.subject4Desc} accent="mint" />
           </div>
         </section>
       </div>

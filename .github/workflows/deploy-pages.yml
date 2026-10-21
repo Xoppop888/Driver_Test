@@ -51,7 +51,7 @@ jobs:
       - name: Build static export
         run: pnpm build
         env:
-          NEXT_PUBLIC_UNLOCK_CODE: ${{ secrets.DRIVEPREP_UNLOCK_CODE }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

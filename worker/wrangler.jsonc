@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "driveprep-access-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-21",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "CORS_ORIGINS": "https://xoppop888.github.io"
+  }
+  // Set account_id here or pass --account-id in CI. Secrets are set with `wrangler secret put`.
+}

@@ -1,5 +1,3 @@
-import rawQuestions from "@/data/questions.json";
-
 export type Language = "ru" | "en";
 export type Subject = 1 | 4;
 export type QuestionType = "true_false" | "single_choice" | "multiple_choice";
@@ -19,21 +17,11 @@ export type Question = {
   image_url: string | null;
 };
 
-export const questionBank = rawQuestions as Question[];
-
-export function getQuestions(subject: Subject) {
-  return questionBank.filter((question) => question.subject === subject);
-}
-
-export function getExamQuestions(subject: Subject, count = 100) {
-  const pool = [...getQuestions(subject)];
+export function getExamQuestions(questions: Question[], count = 100) {
+  const pool = [...questions];
   for (let index = pool.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1));
     [pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
   }
   return pool.slice(0, Math.min(count, pool.length));
-}
-
-export function getQuestion(id: string) {
-  return questionBank.find((question) => question.id === id);
 }

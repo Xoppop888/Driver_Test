@@ -29,7 +29,7 @@ export function QuestionCard({ question, language, copy: t, selected, submitted 
           <img src={imageSrc} alt="" className="max-h-[205px] w-full rounded-xl object-contain sm:max-h-[300px] sm:rounded-2xl" />
         </div>
       ) : null}
-      <div className="p-4 sm:p-8">
+      <div className="min-w-0 p-4 [overflow-wrap:anywhere] sm:p-8">
         <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
           <span className="rounded-full bg-[var(--soft-accent)] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">
             {question.type === "multiple_choice" ? "Multiple choice" : question.type === "true_false" ? "True / False" : "Single choice"}
@@ -58,13 +58,13 @@ export function QuestionCard({ question, language, copy: t, selected, submitted 
                 key={`${question.id}-${index}`}
                 disabled={isAnswered}
                 onClick={() => onSelect(index)}
-                className={`focus-ring group flex min-h-[54px] items-center gap-3 rounded-2xl border px-3 text-left transition-all sm:min-h-[64px] sm:gap-4 sm:px-5 ${optionClass} ${isAnswered ? "cursor-default" : "cursor-pointer"}`}
+                className={`focus-ring group flex min-h-[54px] w-full min-w-0 items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all sm:min-h-[64px] sm:gap-4 sm:px-5 ${optionClass} ${isAnswered ? "cursor-default" : "cursor-pointer"}`}
                 aria-pressed={isSelected}
               >
                 <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl border text-sm font-black sm:h-9 sm:w-9 ${isSelected || (isAnswered && isCorrect) ? "border-transparent bg-white/75" : "border-[var(--line)] bg-white"}`}>
                   {isAnswered && isCorrect ? <CheckCircle2 size={19} /> : isWrongSelection ? <CircleX size={19} /> : isSelected ? <Check size={18} /> : <Circle size={18} className="text-[var(--muted)]" />}
                 </span>
-                <span className="text-sm font-bold leading-snug sm:text-base">{option}</span>
+                <span className="min-w-0 flex-1 break-words text-sm font-bold leading-snug [overflow-wrap:anywhere] sm:text-base">{option}</span>
               </button>
             );
           })}

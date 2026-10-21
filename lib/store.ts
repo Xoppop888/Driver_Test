@@ -5,14 +5,28 @@ import type { Language, Subject } from "./questions";
 type Progress = Record<string, number>;
 type PracticePositions = Record<string, number>;
 
-const configuredUnlockCode = process.env.NEXT_PUBLIC_UNLOCK_CODE?.trim();
-const unlockCode = configuredUnlockCode || "DRIVEPREP-2026";
+function createId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
+export function getInstallationId() {
+  if (typeof window === "undefined") return "";
+  const key = "driveprep-installation-id";
+  let value = window.localStorage.getItem(key);
+  if (!value) {
+    value = createId();
+    window.localStorage.setItem(key, value);
+  }
+  return value;
+}
 
 type StudyState = {
   language: Language;
   mistakes: string[];
   progress: Progress;
   practicePositions: PracticePositions;
+  accessToken: string | null;
   unlocked: boolean;
   setLanguage: (language: Language) => void;
   toggleLanguage: () => void;
@@ -20,7 +34,7 @@ type StudyState = {
   clearMistakes: () => void;
   savePracticePosition: (subject: Subject, position: number) => void;
   clearPracticePosition: (subject: Subject) => void;
-  unlockWithCode: (code: string) => boolean;
+  setAccessToken: (token: string) => void;
   lock: () => void;
   getSubjectProgress: (subject: Subject, ids: string[]) => number;
 };
@@ -32,16 +46,14 @@ export const useStudyStore = create<StudyState>()(
       mistakes: [],
       progress: {},
       practicePositions: {},
+      accessToken: null,
       unlocked: false,
       setLanguage: (language) => set({ language }),
       toggleLanguage: () => set((state) => ({ language: state.language === "ru" ? "en" : "ru" })),
       recordAnswer: (questionId, correct) =>
         set((state) => ({
           mistakes: correct ? state.mistakes : Array.from(new Set([...state.mistakes, questionId])),
-          progress: {
-            ...state.progress,
-            [questionId]: correct ? 1 : 0,
-          },
+          progress: { ...state.progress, [questionId]: correct ? 1 : 0 },
         })),
       clearMistakes: () => set({ mistakes: [] }),
       savePracticePosition: (subject, position) =>
@@ -52,12 +64,8 @@ export const useStudyStore = create<StudyState>()(
           delete next[subject];
           return { practicePositions: next };
         }),
-      unlockWithCode: (code) => {
-        const isValid = code.trim().toUpperCase() === unlockCode.toUpperCase();
-        if (isValid) set({ unlocked: true });
-        return isValid;
-      },
-      lock: () => set({ unlocked: false }),
+      setAccessToken: (token) => set({ accessToken: token, unlocked: true }),
+      lock: () => set({ accessToken: null, unlocked: false }),
       getSubjectProgress: (_subject, ids) => {
         const progress = get().progress;
         const answered = ids.filter((id) => Object.prototype.hasOwnProperty.call(progress, id)).length;
@@ -72,8 +80,14 @@ export const useStudyStore = create<StudyState>()(
         mistakes: state.mistakes,
         progress: state.progress,
         practicePositions: state.practicePositions,
+        accessToken: state.accessToken,
         unlocked: state.unlocked,
       }),
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<StudyState> & { unlocked?: boolean };
+        return { ...state, accessToken: null, unlocked: false } as StudyState;
+      },
+      version: 2,
     },
   ),
 );

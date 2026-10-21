@@ -1,4 +1,4 @@
-const CACHE_NAME = "driveprep-shell-v1";
+const CACHE_NAME = "driveprep-shell-v2";
 const APP_SHELL = ["./", "./manifest.webmanifest", "./logo.svg"];
 
 self.addEventListener("install", (event) => {
@@ -13,10 +13,17 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+  // Access status and question responses are deliberately network-only. Never cache entitlements or bank data.
+  if (url.pathname.includes("/v1/") || url.pathname.includes("/api/")) {
+    event.respondWith(fetch(event.request, { cache: "no-store" }));
+    return;
+  }
   event.respondWith(
     fetch(event.request).then((response) => {
-      const copy = response.clone();
-      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      if (response.ok && response.type === "basic" && !response.headers.has("Set-Cookie")) {
+        const copy = response.clone();
+        void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      }
       return response;
     }).catch(() => caches.match(event.request).then((cached) => cached || caches.match("./")))
   );

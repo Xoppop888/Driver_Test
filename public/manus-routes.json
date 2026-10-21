@@ -3,6 +3,7 @@
     { "path": "/", "title": "DrivePrep" },
     { "path": "/practice/:subject", "title": "Practice" },
     { "path": "/exam/:subject", "title": "Mock Exam" },
-    { "path": "/mistakes", "title": "Mistakes" }
+    { "path": "/mistakes", "title": "Mistakes" },
+    { "path": "/admin", "title": "Access code administration" }
   ]
 }
