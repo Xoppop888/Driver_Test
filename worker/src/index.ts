@@ -240,13 +240,19 @@ function unwrapRpc<T>(data: unknown): T {
 }
 
 async function supabaseRpc<T>(config: RuntimeConfig, name: string, payload: Record<string, unknown>): Promise<T> {
+  const headers = new Headers({
+    apikey: config.serviceRoleKey,
+    "Content-Type": "application/json",
+  });
+  // Modern sb_secret_ keys are not JWTs; only legacy service_role keys belong
+  // in Authorization: Bearer, or Supabase rejects the request as an invalid JWT.
+  if (!config.serviceRoleKey.startsWith("sb_secret_")) {
+    headers.set("Authorization", `Bearer ${config.serviceRoleKey}`);
+  }
+
   const response = await fetch(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: "POST",
-    headers: {
-      apikey: config.serviceRoleKey,
-      Authorization: `Bearer ${config.serviceRoleKey}`,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify(payload),
   });
 
