@@ -7,7 +7,7 @@ import { ExamTimer, ProgressBar } from "@/components/exam-timer";
 import { QuestionCard } from "@/components/question-card";
 import { getQuestionSet } from "@/lib/api";
 import { copy } from "@/lib/i18n";
-import { getExamQuestions, type Question, type Subject } from "@/lib/questions";
+import type { Question, Subject } from "@/lib/questions";
 import { useStudyStore } from "@/lib/store";
 
 function sameAnswer(selected: number[], correct: number[]) { return selected.length === correct.length && selected.every((index) => correct.includes(index)); }
@@ -34,10 +34,9 @@ export function ExamClient({ subject }: { subject: Subject }) {
     let active = true;
     setLoading(true);
     setError("");
-    getQuestionSet(subject).then((result) => {
+    getQuestionSet(subject, { mode: "exam" }).then((result) => {
       if (!active) return;
-      const selectedQuestions = getExamQuestions(result.questions, result.premium ? 100 : 50);
-      setQuestions(selectedQuestions);
+      setQuestions(result.questions);
       setRemaining(result.remaining);
       setResetAt(result.resetAt);
       setDeadline(Date.now() + 45 * 60 * 1000);

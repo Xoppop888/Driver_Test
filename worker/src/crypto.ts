@@ -18,6 +18,22 @@ export async function hashSessionToken(token: string, pepper: string): Promise<s
   return sha256Hex(`driveprep:session:v1:${token}:${pepper}`);
 }
 
+/** Pairing codes are one-time values; only this peppered digest is persisted. */
+export function createTelegramPairingCode(): string {
+  const hex = randomHex(8);
+  return `TG-${hex.match(/.{1,4}/g)?.join("-") ?? hex}`;
+}
+
+export async function hashTelegramPairingCode(code: string, pepper: string): Promise<string> {
+  const normalized = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return sha256Hex(`driveprep:telegram-pairing:v1:${normalized}:${pepper}`);
+}
+
+/** Telegram's webhook secret is stable for this bot token and never exposed to clients. */
+export async function deriveTelegramWebhookSecret(botToken: string): Promise<string> {
+  return sha256Hex(`driveprep:telegram-webhook:v1:${botToken}`);
+}
+
 function randomHex(bytes: number): string {
   const values = crypto.getRandomValues(new Uint8Array(bytes));
   return Array.from(values, (value) => value.toString(16).padStart(2, "0")).join("").toUpperCase();

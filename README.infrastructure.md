@@ -1,41 +1,42 @@
-# DrivePrep backend infrastructure
+# DrivePrep — backend infrastructure
 
-This document covers only the **Cloudflare Worker + Supabase backend**. For the complete Russian step-by-step setup, see [`DEPLOY-RU.md`](DEPLOY-RU.md).
+Техническое руководство по Supabase и Cloudflare Worker. Пошаговый release runbook — [`DEPLOY-RU.md`](DEPLOY-RU.md).
 
-## What is enforced
+## Политика доступа
 
-| Access state | Per Subject 1 or 4 | Reset / repeat behavior |
+| Режим | На каждый Subject | Поведение |
 |---|---:|---|
-| Free | **50 questions per Shanghai calendar day** | The first request atomically saves a deterministic 50-ID pool in `daily_question_usage`. Any repeat for the same `installationId`, Subject, and Asia/Shanghai date returns the **same questions and same `remaining`**; it does not spend or reset quota. |
-| Premium | **100 questions** | No daily limit. A valid bearer session returns the deterministic 100-question static bank for that Subject. |
+| Бесплатный | До 50 вопросов за календарный день `Asia/Shanghai` | Атомарно сохраняется стабильный пул ID; повторные обращения в тот же день возвращают его же. |
+| Premium до активации полного банка | Существующие первые 100 вопросов | Сохраняет работающий production API до миграции данных и обновления Worker. |
+| Premium после активации | Subject 1: 2 545; Subject 4: 1 833 | Практика загружает страницы; одна premium-попытка экзамена содержит 100 случайных вопросов. |
 
-The imported bank has exactly **100 static questions per Subject**. The import script deterministically picks them from `data/questions.json`; it preserves `image_url` paths exactly and never touches other files or image assets.
+Обновлённый Worker сохраняет legacy-контракт для запросов без `mode`: premium получает первые 100 доступных вопросов, free — сохранённые 50. Новые клиенты явно передают `mode=practice` или `mode=exam`. Эта совместимость позволяет обновить API до frontend и безопасно включить банк до ручного Pages release.
 
-`GET /v1/questions` is deliberately a **practice** endpoint. It returns `correct_index` / `correct_indices` behind the Worker access gate so the existing practice client can score locally. There is no backend exam session or answer-submission implementation in this backend.
+Бинарные изображения в Supabase Storage не загружаются. В `question_bank` остаётся строковый `image_url` и JSON-поля вопроса.
 
-## Files
+## Файлы
 
-| Path | Purpose |
+| Путь | Назначение |
 |---|---|
-| `worker/src/index.ts` | CORS, API routing, validation, session/code hashing calls, Supabase REST RPC client |
-| `worker/src/crypto.ts` | SHA-256 hashing with pepper, opaque tokens, code generation, constant-time admin key comparison |
-| `worker/wrangler.jsonc` | Worker deployment configuration |
-| `supabase/migrations/20261021000000_driveprep_access.sql` | Tables, RLS/grants, private security-definer RPCs, atomic daily quota logic |
-| `supabase/scripts/import-questions.mjs` | Deterministic 100-per-subject import from `data/questions.json` |
-| `.github/workflows/deploy-worker.yml` | Optional main-branch Worker deployment workflow |
+| `worker/src/index.ts` | CORS, access/session, pagination, exam, lookup ошибок, Telegram setup/webhook |
+| `worker/src/crypto.ts` | Хеширование кодов/сессий, pairing-code, webhook secret, constant-time admin comparison |
+| `worker/wrangler.jsonc` | Публичные Worker variables; никакие реальные secrets не записывать сюда |
+| `supabase/migrations/20261021000000_driveprep_access.sql` | Уже применённая исходная схема/RPC |
+| `supabase/migrations/20261021010000_expand_question_bank_and_telegram.sql` | Аддитивное расширение, rollout-state, activation RPC, Telegram tables/RPC |
+| `supabase/scripts/import-questions.mjs` | Dry-run и batch upsert 4 378 записей, не передающий image binaries |
+| `.github/workflows/deploy-pages.yml` | Только ручная публикация Pages после готовности backend |
 
-## Supabase setup
+## Supabase: миграция, импорт, активация
 
-1. Create a Supabase project. Keep its **service-role key server-side only**.
-2. Apply `supabase/migrations/20261021000000_driveprep_access.sql` using the Supabase CLI migration workflow or SQL editor.
-3. Validate the deterministic selection (does not write):
+1. В проекте Supabase, где уже применена базовая миграция, примените только `20261021010000_expand_question_bank_and_telegram.sql`. Миграция сохраняет прежний premium/free pool до отдельной активации полного банка.
+2. Проверьте локально:
 
    ```bash
-   cd /home/ubuntu/driveprep
    node supabase/scripts/import-questions.mjs
    ```
 
-4. Import the static bank with an administrator/service-role environment. This sends 200 records through Supabase REST and performs idempotent upserts:
+   Ожидаются Subject 1 — 2 545 записей и Subject 4 — 1 833. Первые 100 рангов у обоих предметов совпадают с прежним выбором.
+3. После проверки выполните идемпотентный upsert порциями по 250 в доверенной среде:
 
    ```bash
    SUPABASE_URL='https://YOUR_PROJECT.supabase.co' \
@@ -43,63 +44,71 @@ The imported bank has exactly **100 static questions per Subject**. The import s
    node supabase/scripts/import-questions.mjs --write
    ```
 
-The migration enables RLS, revokes all `PUBLIC`/`anon`/`authenticated` table and RPC privileges, and sets restrictive default ACLs for future tables/functions created by its owner. Only `service_role` may call the private, `security definer` RPCs. Each such function pins `search_path = ''`; all table names use the explicit `public.` schema and ordinary built-in calls use `pg_catalog.` qualification. The browser must never receive a Supabase key for this backend.
+   Скрипт посылает только текстовые/JSON-поля и URL; изображения из файловой системы не открывает.
+4. Убедитесь, что новая версия Worker развернута. Только после этого в SQL Editor выполните:
 
-### Atomic server-side operations
+   ```sql
+   select public.activate_full_question_bank();
+   ```
 
-| RPC (service-role only) | Guarantees |
-|---|---|
-| `redeem_access_code` | Locks one code, rejects used/expired codes, upgrades the installation, and creates a session atomically. |
-| `get_session_entitlement` | Validates a hashed opaque token and returns only entitlement data. |
-| `issue_question_access` | Uses `Asia/Shanghai` in the transaction; locks the user and daily row; persists the free 50-ID daily pool; returns all 100 for premium. |
-| `get_question_bank` | Returns only the requested ordered records, including practice answer fields, through the Worker gate. |
-| `create_access_code_batch` | Saves only peppered SHA-256 hashes and creates a batch atomically. |
+   Функция включает доступ лишь при точном наличии 2 545 и 1 833 записей. Ожидается `{ "ok": true, ... }`; неполный импорт возвращает `question_bank_incomplete` и не включает банк. Не запускайте активацию раньше Worker rollout. До неё premium продолжает видеть прежние 100 вопросов, даже если импорт уже закончен.
+5. После проверки activation запускайте GitHub Pages workflow вручную. Старый frontend без `mode` продолжает получать привычные первые 100 premium-вопросов и до публикации новой версии.
 
-## Worker local setup
+Таблицы/RPC закрыты для browser roles; RLS включён, `SECURITY DEFINER` функции используют `search_path = ''`, явную схему и grants только необходимым ролям. `activate_full_question_bank()` доступна сервисной роли и владельцу БД в SQL Editor. Не выдавайте `service_role` браузеру.
+
+## Worker: локальная настройка и секреты
 
 ```bash
-cd /home/ubuntu/driveprep/worker
-cp .dev.vars.example .dev.vars
-# Edit .dev.vars; use real values only in the untracked copy.
+cd worker
 npm ci
+cp .dev.vars.example .dev.vars
 npm run typecheck
 npm run dev
 ```
 
-Required Worker runtime variables:
+Не коммитьте `.dev.vars`. Production secrets задаются в Cloudflare Worker (Dashboard либо `wrangler secret put NAME`):
 
-| Variable | Description |
+| Secret | Назначение |
 |---|---|
-| `SUPABASE_URL` | Public project URL, already configured in `worker/wrangler.jsonc` as a Worker variable |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only key used for Supabase REST RPCs |
-| `CODE_PEPPER` | At least 32 random characters. Code and session hashes depend on it; rotating it invalidates outstanding codes/sessions. |
-| `ADMIN_KEY` | Long admin secret (maximum 256 chars) checked with a constant-time comparison for batch creation. |
-| `CORS_ORIGINS` | Public Worker variable configured in `worker/wrangler.jsonc`; comma-separated **exact** origins only. Wildcards are not supported. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Серверные RPC Supabase |
+| `CODE_PEPPER` | Случайные ≥32 символов; ротация аннулирует коды/сессии |
+| `ADMIN_KEY` | Случайная строка от 32 до 256 символов для администрирования |
+| `TELEGRAM_BOT_TOKEN` | Token из `@BotFather`; хранить только как Worker secret |
 
-For deployed secrets, set `SUPABASE_SERVICE_ROLE_KEY`, `CODE_PEPPER`, and `ADMIN_KEY` through Cloudflare Dashboard or `wrangler secret put <NAME>` from `worker/`; do not add secrets to `wrangler.jsonc`. `SUPABASE_URL` and `CORS_ORIGINS` are non-secret variables in that config. Set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as GitHub repository secrets for the automated workflow.
+`SUPABASE_URL` и `CORS_ORIGINS` — обычные Worker variables в `worker/wrangler.jsonc`; `CORS_ORIGINS` — exact-origin allowlist. GitHub Actions Worker deploy требует существующие secrets `CLOUDFLARE_API_TOKEN` и `CLOUDFLARE_ACCOUNT_ID`.
 
-## HTTP API contract
+Закройте `/v1/admin/*` edge-политикой Cloudflare Access либо эквивалентной защитой/rate limiting. Сам `ADMIN_KEY` остаётся обязательным вторым рубежом; CORS не блокирует непредназначенные для браузера вызовы. Перед deploy проверьте, что сохранённый `ADMIN_KEY` соответствует минимуму 32 символа. Не логируйте и не публикуйте секрет.
 
-All non-2xx errors have the form:
+## HTTP API
 
-```json
-{ "error": "Human-readable message.", "code": "machine_readable_code" }
-```
+Все ответы `Cache-Control: no-store`; browser origins ограничены точным CORS allowlist.
 
-`Origin` requests are allowed only when exactly listed in `CORS_ORIGINS`; the Worker supports CORS `OPTIONS` preflight. Responses are `Cache-Control: no-store`.
+| Метод / endpoint | Назначение |
+|---|---|
+| `GET /health` или `/v1/health` | Health-check без обращения к базе |
+| `POST /v1/access/redeem` | Погашение одноразового кода, создание сессии |
+| `GET /v1/access/session` | Проверка bearer-сессии |
+| `GET /v1/questions?subject=1\|4&installationId=…` | Legacy-контракт: 100 premium либо до 50 free |
+| `GET /v1/questions?subject=1\|4&installationId=…&mode=practice&offset=0&limit=50` | Явный постраничный режим; ответ включает `total` и `nextOffset` |
+| `GET /v1/questions?subject=1\|4&installationId=…&mode=exam` | Случайный набор: 100 premium или до 50 вопросов из free pool |
+| `POST /v1/questions/lookup` | Возвращает только переданные ID, доступные текущей free/premium entitlement |
+| `POST /v1/admin/access-codes` | `{count:1..100, expiresAt?, note?}`, заголовок `X-Admin-Key` |
+| `POST /v1/admin/telegram/setup` | Настраивает webhook, требует `X-Admin-Key` |
+| `POST /v1/admin/telegram/pairing-code` | Выпускает одноразовый короткоживущий pairing-код, требует `X-Admin-Key` |
+| `POST /v1/telegram/webhook` | Принимает только Telegram updates с корректным `X-Telegram-Bot-Api-Secret-Token` |
 
-| Method and endpoint | Request | Success response |
-|---|---|---|
-| `GET /health` (also `/v1/health`) | — | `{ "ok": true, "service": "driveprep-access-api" }` |
-| `POST /v1/access/redeem` | `{ "code", "installationId" }` | `{ "ok": true, "token", "expiresAt", "status": "premium" }` |
-| `GET /v1/access/session` | `Authorization: Bearer <token>` | `{ "unlocked": true|false, "expiresAt": "..."|null }` |
-| `GET /v1/questions?subject=1\|4&installationId=...` | Optional `Authorization: Bearer <token>` | `{ "questions", "remaining", "resetAt", "premium" }` |
-| `POST /v1/admin/access-codes` | `X-Admin-Key: <ADMIN_KEY>` and `{ "count" (1–100), "expiresAt"?, "note"? }` | `{ "codes": ["DP-…"] }` |
+`installationId` (8–128 символов) — анонимный ID браузера, не доказательство личности. Без действительного bearer token он даёт только бесплатный пул. Токен сессии хранится в приложении; Supabase получает его hash.
 
-`installationId` is a client-generated identifier (8–128 characters; permitted characters are alphanumeric plus `.`, `_`, `:`, `-`). It identifies free usage only. Premium requests require a valid bearer session bound to the same `installationId`; the ID without a session never grants premium access. Keep the successful redeem token private.
+### Практика, экзамен и ошибки
 
-For free calls, the first `GET /v1/questions` for an installation + subject + Shanghai date creates a server-side user record and a daily usage record. It returns at most 50 questions and `remaining` as the size of that stable daily pool (normally `50`). A later fetch returns the persisted pool and exactly the same `remaining` rather than issuing a fresh set or presenting a misleading zero while questions remain available. Premium responses have `remaining: null` and `resetAt: null` because their 100-question bank has no daily quota.
+Premium practice запрашивает страницы размером до 50 вопросов; сервер повторно удостоверяет entitlement на каждом запросе. Frontend передаёт явный `mode=practice`. Exam использует `mode=exam` и серверно случайную выборку из разрешённого пула. Ошибки передают только локально сохранённые question IDs; Worker пересекает их с активными разрешениями, прежде чем загрузить записи из RPC.
 
-## Access code lifecycle
+## Telegram: только личный чат администратора
 
-The admin endpoint generates 128-bit random `DP-…` codes. It hashes normalized code input as SHA-256 with `CODE_PEPPER` before calling Supabase; plaintext codes are never put in a table and are returned only once in the admin response. `expiresAt` is an optional **redemption deadline** for codes. Successful redemption creates a 30-day opaque bearer session; each valid use extends it by another 30 days. A cleared browser token cannot be recovered through `installationId` alone; the user must contact an administrator for a replacement session/code.
+После установки `TELEGRAM_BOT_TOKEN` в Worker откройте `/admin`, задайте webhook и создайте pairing-код. В личном чате с ботом отправьте `/pair <код>`. После привязки команда `/generate N`, где `N` от 1 до 100, отправит CSV-документ в тот же личный чат. Группы, каналы, рассылка и расписание не поддерживаются.
+
+Webhook принимает только private messages, сверяет `X-Telegram-Bot-Api-Secret-Token` и связывает один `chat.id`/`from.id`. Pairing/access-коды хешируются до записи. `update_id` claim атомарен: повтор webhook update не создаст вторую партию. Если отправка документа после создания batch не удалась, plaintext-коды не восстанавливаются и автоматически повторно не отправляются.
+
+## Публичные данные и ограничения
+
+По принятому решению исходная публичная Git-история остаётся без изменений. Полный `data/questions.json` и статические изображения можно скачать напрямую из публичного репозитория/Pages; Worker защищает выдачу приложения, а не исходные файлы. Анонимный installation ID допускает сброс квоты при очистке данных/смене браузера.

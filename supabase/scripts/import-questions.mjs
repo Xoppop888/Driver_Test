@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * Imports exactly 100 stable questions for Subject 1 and Subject 4.
- * Selection is deterministic: SHA-256(subject:id), then id. No question text
- * or image assets are modified; image_url is preserved exactly as in the JSON.
+ * Deterministically imports every DrivePrep question (Subject 1=2545,
+ * Subject 4=1833). SHA-256(subject:id), then id, defines selection_rank.
+ * Therefore ranks 1..100 are exactly the same stable rows/ranks as the legacy
+ * 100-question importer. This script sends JSON records only: it never reads,
+ * uploads, or writes image binaries; image_url is retained as plain text.
  *
  * Usage (from repository root):
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node supabase/scripts/import-questions.mjs --write
- * Omit --write to validate and print the deterministic selection only.
+ * Omit --write for deterministic validation/dry run.
  */
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -15,23 +17,19 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const inputPath = path.join(root, "data", "questions.json");
-const subjects = [1, 4];
-const perSubject = 100;
+const subjectCounts = new Map([[1, 2545], [4, 1833]]);
+const legacyPerSubject = 100;
+const writeBatchSize = 250;
 const shouldWrite = process.argv.includes("--write");
 
 function stableRank(question) {
   return createHash("sha256").update(`${question.subject}:${question.id}`).digest("hex");
 }
 
-function selectQuestions(allQuestions, subject) {
-  const candidates = allQuestions
+function orderedQuestions(allQuestions, subject) {
+  return allQuestions
     .filter((question) => question.subject === subject && typeof question.id === "string")
     .sort((a, b) => stableRank(a).localeCompare(stableRank(b)) || a.id.localeCompare(b.id));
-
-  if (candidates.length < perSubject) {
-    throw new Error(`Subject ${subject} has ${candidates.length} candidates; expected at least ${perSubject}.`);
-  }
-  return candidates.slice(0, perSubject);
 }
 
 function asArray(value) {
@@ -56,25 +54,44 @@ function toDbRecord(question, selectionRank) {
     correct_indices: asArray(question.correct_indices).filter(Number.isInteger),
     explanation_ru: nullableString(question.explanation_ru),
     explanation_en: nullableString(question.explanation_en),
+    // Deliberately plain URL text only. No image file or binary field is sent.
     image_url: nullableString(question.image_url),
     source: question.source ?? {},
     translation_status: question.translation_status ?? {}
   };
 }
 
+function fingerprint(ids) {
+  return createHash("sha256").update(ids.join("\n")).digest("hex").slice(0, 16);
+}
+
 const raw = JSON.parse(await readFile(inputPath, "utf8"));
 if (!Array.isArray(raw)) throw new Error("data/questions.json must contain an array.");
 
-const selected = subjects.flatMap((subject) =>
-  selectQuestions(raw, subject).map((question, index) => toDbRecord(question, index + 1))
-);
+const selected = [];
+for (const [subject, expectedCount] of subjectCounts) {
+  const ordered = orderedQuestions(raw, subject);
+  if (ordered.length !== expectedCount) {
+    throw new Error(`Subject ${subject} has ${ordered.length} candidates; expected exactly ${expectedCount}.`);
+  }
 
-console.log(`Validated ${selected.length} records: ${subjects.map((subject) => `Subject ${subject}=100`).join(", ")}.`);
-for (const subject of subjects) {
-  const ids = selected.filter((question) => question.subject === subject).map((question) => question.id);
-  const fingerprint = createHash("sha256").update(ids.join("\n")).digest("hex").slice(0, 16);
-  console.log(`Subject ${subject}: 100 IDs, selection fingerprint ${fingerprint}, first=${ids[0]}, last=${ids.at(-1)}`);
+  // This is intentionally kept as an assertion rather than a second selection
+  // algorithm: the first 100 ordered IDs are the previous importer selection.
+  const legacyIds = ordered.slice(0, legacyPerSubject).map((question) => question.id);
+  const rankedIds = ordered.map((question) => question.id);
+  if (legacyIds.some((id, index) => rankedIds[index] !== id)) {
+    throw new Error(`Subject ${subject} no longer preserves legacy ranks 1..${legacyPerSubject}.`);
+  }
+
+  selected.push(...ordered.map((question, index) => toDbRecord(question, index + 1)));
+  console.log(
+    `Subject ${subject}: ${ordered.length} IDs, first-${legacyPerSubject} fingerprint ${fingerprint(legacyIds)}, ` +
+    `first=${legacyIds[0]}, last=${ordered.at(-1)?.id}`
+  );
 }
+
+if (selected.length !== 4378) throw new Error(`Expected 4378 total records; got ${selected.length}.`);
+console.log(`Validated ${selected.length} records (Subject 1=2545, Subject 4=1833); write batch size=${writeBatchSize}.`);
 
 if (!shouldWrite) {
   console.log("Dry run only. Re-run with --write and service-role environment variables to import.");
@@ -87,16 +104,20 @@ if (!url || !serviceKey) {
   throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required with --write.");
 }
 
-const response = await fetch(`${url}/rest/v1/question_bank?on_conflict=id`, {
-  method: "POST",
-  headers: {
-    apikey: serviceKey,
-    Authorization: `Bearer ${serviceKey}`,
-    "Content-Type": "application/json",
-    Prefer: "resolution=merge-duplicates,return=minimal"
-  },
-  body: JSON.stringify(selected)
-});
-if (!response.ok) throw new Error(`Supabase import failed (${response.status}): ${await response.text()}`);
+for (let start = 0; start < selected.length; start += writeBatchSize) {
+  const batch = selected.slice(start, start + writeBatchSize);
+  const response = await fetch(`${url}/rest/v1/question_bank?on_conflict=id`, {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=minimal"
+    },
+    body: JSON.stringify(batch)
+  });
+  if (!response.ok) throw new Error(`Supabase import failed at ${start + 1}-${start + batch.length} (${response.status}): ${await response.text()}`);
+  console.log(`Imported ${start + 1}-${start + batch.length} of ${selected.length}.`);
+}
 
-console.log("Imported 200 deterministically selected question records.");
+console.log("Imported all 4,378 deterministic question records; image_url text only, no image binaries.");

@@ -3,7 +3,9 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=replace-with-service-role-key
 # Generate a long random secret; changing it invalidates all outstanding codes and sessions.
 CODE_PEPPER=replace-with-at-least-32-random-characters
-# Used only on POST /v1/admin/access-codes; keep it <= 256 characters.
+# Admin APIs require a random key from 32 to 256 characters; restrict them at the edge too.
 ADMIN_KEY=replace-with-a-long-random-admin-key
+# Optional for Telegram administration; keep real value only in this untracked file or a Worker secret.
+TELEGRAM_BOT_TOKEN=replace-with-token-from-BotFather
 # Comma-separated exact origins. No wildcard is accepted.
 CORS_ORIGINS=http://localhost:3000,https://app.example.com

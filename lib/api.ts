@@ -8,6 +8,16 @@ export type QuestionSet = {
   remaining: number | null;
   resetAt: string | null;
   premium: boolean;
+  total: number;
+  nextOffset: number | null;
+};
+
+export type QuestionMode = "practice" | "exam";
+
+export type QuestionSetRequest = {
+  mode: QuestionMode;
+  offset?: number;
+  limit?: number;
 };
 
 export class ApiError extends Error {
@@ -66,9 +76,33 @@ export async function getAccessSession() {
   return request<{ unlocked: boolean; expiresAt: string | null }>("/access/session");
 }
 
-export async function getQuestionSet(subject: Subject): Promise<QuestionSet> {
-  const installationId = encodeURIComponent(getInstallationId());
-  return request<QuestionSet>(`/questions?subject=${subject}&installationId=${installationId}`);
+export async function getQuestionSet(subject: Subject, options: QuestionSetRequest): Promise<QuestionSet> {
+  const query = new URLSearchParams({
+    subject: String(subject),
+    installationId: getInstallationId(),
+    mode: options.mode,
+    offset: String(options.offset ?? 0),
+    limit: String(options.limit ?? 50),
+  });
+  return request<QuestionSet>(`/questions?${query.toString()}`);
+}
+
+/**
+ * Requests only locally recorded mistake IDs. The API is responsible for
+ * withholding IDs outside the caller's active premium session or free pool.
+ */
+export async function lookupQuestions(questionIds: string[]): Promise<Question[]> {
+  const uniqueIds = Array.from(new Set(questionIds));
+  if (!uniqueIds.length) return [];
+  const found: Question[] = [];
+  for (let offset = 0; offset < uniqueIds.length; offset += 100) {
+    const result = await request<{ questions: Question[] }>("/questions/lookup", {
+      method: "POST",
+      body: JSON.stringify({ installationId: getInstallationId(), questionIds: uniqueIds.slice(offset, offset + 100) }),
+    });
+    found.push(...result.questions);
+  }
+  return found;
 }
 
 export async function generateAccessCodes(input: { count: number; expiresAt: string | null; note: string }, adminKey: string) {
@@ -76,6 +110,20 @@ export async function generateAccessCodes(input: { count: number; expiresAt: str
     method: "POST",
     headers: { "X-Admin-Key": adminKey },
     body: JSON.stringify(input),
+  });
+}
+
+export async function setupTelegramBot(adminKey: string) {
+  return request<{ ok: true; botUsername?: string }>("/admin/telegram/setup", {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
+  });
+}
+
+export async function createTelegramPairingCode(adminKey: string) {
+  return request<{ code: string; expiresAt?: string | null }>("/admin/telegram/pairing-code", {
+    method: "POST",
+    headers: { "X-Admin-Key": adminKey },
   });
 }
 

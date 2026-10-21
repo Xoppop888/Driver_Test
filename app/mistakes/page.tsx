@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MistakeTracker } from "@/components/mistake-tracker";
-import { getQuestionSet } from "@/lib/api";
+import { lookupQuestions } from "@/lib/api";
 import { copy } from "@/lib/i18n";
 import type { Question } from "@/lib/questions";
 import { useStudyStore } from "@/lib/store";
@@ -17,11 +17,15 @@ export default function MistakesPage() {
   const t = copy[language];
   useEffect(() => {
     let active = true;
-    Promise.all([getQuestionSet(1), getQuestionSet(4)]).then((sets) => {
-      if (active) setAvailableQuestions(sets.flatMap((set) => set.questions));
+    if (mistakeIds.length === 0) {
+      setAvailableQuestions([]);
+      return () => { active = false; };
+    }
+    lookupQuestions(mistakeIds).then((questions) => {
+      if (active) setAvailableQuestions(questions);
     }).catch(() => { if (active) setAvailableQuestions([]); });
     return () => { active = false; };
-  }, []);
+  }, [mistakeIds]);
   const byId = new Map(availableQuestions.map((question) => [question.id, question]));
   const questions = mistakeIds.map((id) => byId.get(id)).filter((question): question is Question => Boolean(question));
   const subject = questions[0]?.subject ?? 1;
