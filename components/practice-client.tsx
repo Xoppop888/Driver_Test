@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Home, RotateCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Home } from "lucide-react";
+import { useEffect, useState } from "react";
 import { QuestionCard } from "@/components/question-card";
-import { UnlockButton } from "@/components/unlock-dialog";
 import { ProgressBar } from "@/components/exam-timer";
 import { copy } from "@/lib/i18n";
 import { getQuestions, type Question, type Subject } from "@/lib/questions";
 import { useStudyStore } from "@/lib/store";
-import { useEffect, useState } from "react";
 
 function sameAnswer(selected: number[], correct: number[]) {
   return selected.length === correct.length && selected.every((index) => correct.includes(index));
@@ -19,23 +18,39 @@ export function PracticeClient({ subject }: { subject: Subject }) {
   const recordAnswer = useStudyStore((state) => state.recordAnswer);
   const savePracticePosition = useStudyStore((state) => state.savePracticePosition);
   const clearPracticePosition = useStudyStore((state) => state.clearPracticePosition);
+  const mistakeIds = useStudyStore((state) => state.mistakes);
   const savedPosition = useStudyStore((state) => state.practicePositions[String(subject)] ?? 0);
-  const unlocked = useStudyStore((state) => state.unlocked);
   const t = copy[language];
-  const allQuestions = getQuestions(subject);
-  const questions = unlocked ? allQuestions : allQuestions.slice(0, 20);
+  const [questions, setQuestions] = useState<Question[]>(() => getQuestions(subject));
   const [position, setPosition] = useState(0);
   const [selected, setSelected] = useState<number[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [finished, setFinished] = useState(false);
-  const question = questions[position];
+  const [requestedQuestionId, setRequestedQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
-    setPosition(Math.min(savedPosition, Math.max(questions.length - 1, 0)));
-  }, [savedPosition, questions.length]);
+    const search = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+    const mistakesOnly = search.get("mistakes") === "true";
+    const requestedId = search.get("question");
+    const allQuestions = getQuestions(subject);
+    const selectedQuestions = mistakesOnly ? allQuestions.filter((question) => mistakeIds.includes(question.id)) : allQuestions;
+    setQuestions(selectedQuestions.length ? selectedQuestions : allQuestions);
+    setRequestedQuestionId(requestedId);
+    setPosition(0);
+    setSelected([]);
+    setSubmitted(false);
+    setFinished(false);
+  }, [mistakeIds, subject]);
+
+  useEffect(() => {
+    const requestedIndex = requestedQuestionId ? questions.findIndex((question) => question.id === requestedQuestionId) : -1;
+    setPosition(requestedIndex >= 0 ? requestedIndex : Math.min(savedPosition, Math.max(questions.length - 1, 0)));
+  }, [questions, requestedQuestionId, savedPosition]);
+
+  const question = questions[position];
 
   if (finished || !question) {
-    return <div className="mx-auto max-w-[760px] px-5 pb-16 pt-14 sm:px-8"><div className="rounded-[30px] border border-[var(--line)] bg-white p-8 text-center shadow-[0_18px_60px_rgba(19,35,43,0.07)] sm:p-12"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--mint)] text-3xl">✓</div><h1 className="mt-7 text-4xl font-black tracking-[-0.07em]">{language === "ru" ? "Практика завершена" : "Practice complete"}</h1><p className="mx-auto mt-4 max-w-md text-sm font-semibold leading-relaxed text-[var(--muted)]">{unlocked ? (language === "ru" ? "Хорошая работа. Ошибки сохранены в отдельном разделе для повторения." : "Good work. Your mistakes are saved in a separate section for review.") : (language === "ru" ? "Бесплатная сессия из 20 вопросов закончена. Откройте полный банк для продолжения." : "Your free 20-question session is complete. Unlock the full bank to continue.")}</p><div className="mt-8 flex flex-wrap justify-center gap-3">{!unlocked ? <UnlockButton /> : null}<Link href="/mistakes" className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3.5 text-sm font-black text-white">{t.navMistakes} <ArrowRight size={16} /></Link><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-5 py-3.5 text-sm font-black"><Home size={16} /> {t.backHome}</Link></div></div></div>;
+    return <div className="mx-auto max-w-[760px] px-5 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-14 sm:px-8"><div className="rounded-[30px] border border-[var(--line)] bg-white p-8 text-center shadow-[0_18px_60px_rgba(19,35,43,0.07)] sm:p-12"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--mint)] text-3xl">✓</div><h1 className="mt-7 text-4xl font-black tracking-[-0.07em]">{t.practiceComplete}</h1><p className="mx-auto mt-4 max-w-md text-sm font-semibold leading-relaxed text-[var(--muted)]">{t.practiceCompleteText}</p><div className="mt-8 flex flex-wrap justify-center gap-3"><Link href="/mistakes" className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3.5 text-sm font-black text-white">{t.navMistakes} <ArrowRight size={16} /></Link><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-5 py-3.5 text-sm font-black"><Home size={16} /> {t.backHome}</Link></div></div></div>;
   }
 
   const goNext = () => {
@@ -49,12 +64,25 @@ export function PracticeClient({ subject }: { subject: Subject }) {
       setSubmitted(false);
     }
   };
+
   const select = (index: number) => {
     if (submitted) return;
-    if (question.type === "multiple_choice") setSelected((current) => current.includes(index) ? current.filter((item) => item !== index) : [...current, index].sort());
-    else { const answer = [index]; setSelected(answer); setSubmitted(true); recordAnswer(question.id, sameAnswer(answer, question.correct_indices)); savePracticePosition(subject, position); }
+    if (question.type === "multiple_choice") {
+      setSelected((current) => current.includes(index) ? current.filter((item) => item !== index) : [...current, index].sort());
+    } else {
+      const answer = [index];
+      setSelected(answer);
+      setSubmitted(true);
+      recordAnswer(question.id, sameAnswer(answer, question.correct_indices));
+      savePracticePosition(subject, position);
+    }
   };
-  const submitMultiple = () => { setSubmitted(true); recordAnswer(question.id, sameAnswer(selected, question.correct_indices)); savePracticePosition(subject, position); };
 
-  return <div className="mx-auto max-w-[900px] px-5 pb-14 pt-8 sm:px-8 sm:pt-10"><div className="flex items-center justify-between gap-4"><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"><ArrowLeft size={15} /> {t.backHome}</Link><span className="rounded-full bg-[var(--soft-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">{t.practiceMode} · 0{subject}</span></div><div className="mt-9"><ProgressBar current={position + 1} total={questions.length} label={`${t.question} ${position + 1} / ${questions.length}`} /><QuestionCard question={question} language={language} copy={t} selected={selected} submitted={submitted} showFeedback={submitted} onSelect={select} onSubmitMulti={submitMultiple} />{submitted ? <div className="mt-5 flex justify-end"><button type="button" onClick={goNext} className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5">{position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} /></button></div> : null}</div></div>;
+  const submitMultiple = () => {
+    setSubmitted(true);
+    recordAnswer(question.id, sameAnswer(selected, question.correct_indices));
+    savePracticePosition(subject, position);
+  };
+
+  return <div className="mx-auto max-w-[900px] overflow-x-hidden px-5 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-8 sm:px-8 sm:pt-10"><div className="flex items-center justify-between gap-4"><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"><ArrowLeft size={15} /> {t.backHome}</Link><span className="rounded-full bg-[var(--soft-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">{t.practiceMode} · 0{subject}</span></div><div className="mt-9"><ProgressBar current={position + 1} total={questions.length} label={`${t.question} ${position + 1} / ${questions.length}`} /><QuestionCard question={question} language={language} copy={t} selected={selected} submitted={submitted} showFeedback={submitted} onSelect={select} onSubmitMulti={submitMultiple} />{submitted ? <div className="mt-5 flex justify-end"><button type="button" onClick={goNext} className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5">{position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} /></button></div> : null}</div></div>;
 }

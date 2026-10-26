@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, BookOpenCheck, CircleAlert, Languages } from "lucide-react";
+import { ArrowUpRight, BookOpenCheck, CircleAlert } from "lucide-react";
 import { useStudyStore } from "@/lib/store";
 import { copy } from "@/lib/i18n";
 import { LanguageToggle } from "./language-toggle";
-import { UnlockButton } from "./unlock-dialog";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -23,7 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
             <span>
               <span className="block text-[15px] font-black tracking-[-0.04em]">{t.appName}</span>
-              <span className="hidden text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)] sm:block">CN THEORY / 01</span>
+              <span className="hidden text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)] sm:block">{language === "ru" ? "ТЕОРИЯ КНР / 01" : "CN THEORY / 01"}</span>
             </span>
           </Link>
 
@@ -36,14 +35,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <CircleAlert size={15} /> {t.navMistakes}
               </Link>
             </nav>
-            <UnlockButton compact />
             <LanguageToggle />
           </div>
         </div>
       </header>
       <main>{children}</main>
       <footer className="mx-auto flex max-w-[1240px] items-center justify-between px-5 pb-8 pt-3 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--muted)] sm:px-8 lg:px-10">
-        <span>Built for the road ahead</span>
+        <span>{language === "ru" ? "Готовьтесь к дороге" : "Built for the road ahead"}</span>
         <span className="flex items-center gap-1">{language === "ru" ? "Учитесь в своём ритме" : "Learn at your pace"} <ArrowUpRight size={13} /></span>
       </footer>
     </div>

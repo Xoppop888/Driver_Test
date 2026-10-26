@@ -1,11 +1,16 @@
 "use client";
 
 import { Languages } from "lucide-react";
+import { useEffect } from "react";
 import { useStudyStore } from "@/lib/store";
 
 export function LanguageToggle() {
   const language = useStudyStore((state) => state.language);
   const toggleLanguage = useStudyStore((state) => state.toggleLanguage);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   return (
     <button

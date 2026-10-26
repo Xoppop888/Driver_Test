@@ -19,13 +19,14 @@ export type Question = {
   image_url: string | null;
 };
 
+export const EXAM_QUESTION_COUNT = 100;
 export const questionBank = rawQuestions as Question[];
 
 export function getQuestions(subject: Subject) {
   return questionBank.filter((question) => question.subject === subject);
 }
 
-export function getExamQuestions(subject: Subject, count = 100) {
+export function getExamQuestions(subject: Subject, count = EXAM_QUESTION_COUNT) {
   const pool = [...getQuestions(subject)];
   for (let index = pool.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1));

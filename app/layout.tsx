@@ -9,13 +9,15 @@ export const viewport = {
   initialScale: 1,
 };
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 export const metadata: Metadata = {
   title: "DrivePrep — China Driving Theory",
   description: "Bilingual practice for China's driving theory exams.",
-  manifest: "/manifest.webmanifest",
+  manifest: `${basePath}/manifest.webmanifest`,
   icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/icon-192.png",
+    icon: `${basePath}/icons/icon-192.png`,
+    apple: `${basePath}/icons/icon-192.png`,
   },
 };
 

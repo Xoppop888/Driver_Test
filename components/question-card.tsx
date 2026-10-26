@@ -23,7 +23,7 @@ export function QuestionCard({ question, language, copy: t, selected, submitted 
   const imageSrc = assetPath(question.image_url);
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-[var(--line)] bg-white shadow-[0_18px_60px_rgba(19,35,43,0.07)]">
+    <section className="max-w-full overflow-hidden rounded-[28px] border border-[var(--line)] bg-white shadow-[0_18px_60px_rgba(19,35,43,0.07)]">
       {imageSrc ? (
         <div className="relative flex max-h-[190px] min-h-[110px] items-center justify-center overflow-hidden bg-[#edf1ed] p-3 sm:max-h-[340px] sm:min-h-[170px] sm:p-5">
           <img src={imageSrc} alt="" className="max-h-[205px] w-full rounded-xl object-contain sm:max-h-[300px] sm:rounded-2xl" />
@@ -32,11 +32,11 @@ export function QuestionCard({ question, language, copy: t, selected, submitted 
       <div className="p-4 sm:p-8">
         <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
           <span className="rounded-full bg-[var(--soft-accent)] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">
-            {question.type === "multiple_choice" ? "Multiple choice" : question.type === "true_false" ? "True / False" : "Single choice"}
+            {question.type === "multiple_choice" ? (language === "ru" ? "Несколько ответов" : "Multiple choice") : question.type === "true_false" ? (language === "ru" ? "Верно / неверно" : "True / False") : (language === "ru" ? "Один ответ" : "Single choice")}
           </span>
-          {question.image_url ? <span className="flex items-center gap-1 text-[11px] font-bold text-[var(--muted)]"><Check size={13} /> Image ready</span> : <span className="flex items-center gap-1 text-[11px] font-bold text-[var(--muted)]"><ImageOff size={13} /> Text question</span>}
+          {question.image_url ? <span className="flex min-w-0 items-center gap-1 text-right text-[11px] font-bold text-[var(--muted)]"><Check size={13} /> {language === "ru" ? "Есть изображение" : "Image ready"}</span> : <span className="flex min-w-0 items-center gap-1 text-right text-[11px] font-bold text-[var(--muted)]"><ImageOff size={13} /> {language === "ru" ? "Текстовый вопрос" : "Text question"}</span>}
         </div>
-        <h2 className="max-w-3xl text-[clamp(1.25rem,6vw,2.3rem)] font-black leading-[1.1] tracking-[-0.05em] text-[var(--ink)] sm:text-[clamp(1.45rem,3vw,2.3rem)]">{language === "ru" ? question.question_ru : question.question_en}</h2>
+        <h2 className="max-w-3xl break-words text-[clamp(1.25rem,6vw,2.3rem)] font-black leading-[1.1] tracking-[-0.05em] text-[var(--ink)] [overflow-wrap:anywhere] sm:text-[clamp(1.45rem,3vw,2.3rem)]">{language === "ru" ? question.question_ru : question.question_en}</h2>
         {isMultiple && !isAnswered ? <p className="mt-3 text-sm font-semibold text-[var(--muted)]">{t.selectAll}</p> : null}
 
         <div className="mt-5 grid gap-2.5 sm:mt-7 sm:gap-3">
@@ -58,13 +58,13 @@ export function QuestionCard({ question, language, copy: t, selected, submitted 
                 key={`${question.id}-${index}`}
                 disabled={isAnswered}
                 onClick={() => onSelect(index)}
-                className={`focus-ring group flex min-h-[54px] items-center gap-3 rounded-2xl border px-3 text-left transition-all sm:min-h-[64px] sm:gap-4 sm:px-5 ${optionClass} ${isAnswered ? "cursor-default" : "cursor-pointer"}`}
+                className={`focus-ring group flex min-h-[54px] min-w-0 items-center gap-3 rounded-2xl border px-3 text-left transition-all sm:min-h-[64px] sm:gap-4 sm:px-5 ${optionClass} ${isAnswered ? "cursor-default" : "cursor-pointer"}`}
                 aria-pressed={isSelected}
               >
                 <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl border text-sm font-black sm:h-9 sm:w-9 ${isSelected || (isAnswered && isCorrect) ? "border-transparent bg-white/75" : "border-[var(--line)] bg-white"}`}>
                   {isAnswered && isCorrect ? <CheckCircle2 size={19} /> : isWrongSelection ? <CircleX size={19} /> : isSelected ? <Check size={18} /> : <Circle size={18} className="text-[var(--muted)]" />}
                 </span>
-                <span className="text-sm font-bold leading-snug sm:text-base">{option}</span>
+                <span className="min-w-0 break-words text-sm font-bold leading-snug [overflow-wrap:anywhere] sm:text-base">{option}</span>
               </button>
             );
           })}
