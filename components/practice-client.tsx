@@ -18,7 +18,6 @@ export function PracticeClient({ subject }: { subject: Subject }) {
   const recordAnswer = useStudyStore((state) => state.recordAnswer);
   const savePracticePosition = useStudyStore((state) => state.savePracticePosition);
   const clearPracticePosition = useStudyStore((state) => state.clearPracticePosition);
-  const mistakeIds = useStudyStore((state) => state.mistakes);
   const savedPosition = useStudyStore((state) => state.practicePositions[String(subject)] ?? 0);
   const t = copy[language];
   const [questions, setQuestions] = useState<Question[]>(() => getQuestions(subject));
@@ -33,24 +32,55 @@ export function PracticeClient({ subject }: { subject: Subject }) {
     const mistakesOnly = search.get("mistakes") === "true";
     const requestedId = search.get("question");
     const allQuestions = getQuestions(subject);
-    const selectedQuestions = mistakesOnly ? allQuestions.filter((question) => mistakeIds.includes(question.id)) : allQuestions;
+    const currentMistakes = useStudyStore.getState().mistakes;
+    const selectedQuestions = mistakesOnly
+      ? allQuestions.filter((question) => currentMistakes.includes(question.id))
+      : allQuestions;
+
     setQuestions(selectedQuestions.length ? selectedQuestions : allQuestions);
     setRequestedQuestionId(requestedId);
     setPosition(0);
     setSelected([]);
     setSubmitted(false);
     setFinished(false);
-  }, [mistakeIds, subject]);
+  }, [subject]);
 
   useEffect(() => {
-    const requestedIndex = requestedQuestionId ? questions.findIndex((question) => question.id === requestedQuestionId) : -1;
+    const requestedIndex = requestedQuestionId
+      ? questions.findIndex((question) => question.id === requestedQuestionId)
+      : -1;
+
     setPosition(requestedIndex >= 0 ? requestedIndex : Math.min(savedPosition, Math.max(questions.length - 1, 0)));
   }, [questions, requestedQuestionId, savedPosition]);
 
   const question = questions[position];
 
   if (finished || !question) {
-    return <div className="mx-auto max-w-[760px] px-5 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-14 sm:px-8"><div className="rounded-[30px] border border-[var(--line)] bg-white p-8 text-center shadow-[0_18px_60px_rgba(19,35,43,0.07)] sm:p-12"><div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--mint)] text-3xl">✓</div><h1 className="mt-7 text-4xl font-black tracking-[-0.07em]">{t.practiceComplete}</h1><p className="mx-auto mt-4 max-w-md text-sm font-semibold leading-relaxed text-[var(--muted)]">{t.practiceCompleteText}</p><div className="mt-8 flex flex-wrap justify-center gap-3"><Link href="/mistakes" className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3.5 text-sm font-black text-white">{t.navMistakes} <ArrowRight size={16} /></Link><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-5 py-3.5 text-sm font-black"><Home size={16} /> {t.backHome}</Link></div></div></div>;
+    return (
+      <div className="mx-auto max-w-[760px] px-5 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-14 sm:px-8">
+        <div className="rounded-[30px] border border-[var(--line)] bg-white p-8 text-center shadow-[0_18px_60px_rgba(19,35,43,0.07)] sm:p-12">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--mint)] text-3xl">✓</div>
+          <h1 className="mt-7 text-4xl font-black tracking-[-0.07em]">{t.practiceComplete}</h1>
+          <p className="mx-auto mt-4 max-w-md text-sm font-semibold leading-relaxed text-[var(--muted)]">
+            {t.practiceCompleteText}
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/mistakes"
+              className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3.5 text-sm font-black text-white"
+            >
+              {t.navMistakes} <ArrowRight size={16} />
+            </Link>
+            <Link
+              href="/"
+              className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-5 py-3.5 text-sm font-black"
+            >
+              <Home size={16} /> {t.backHome}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const goNext = () => {
@@ -67,8 +97,13 @@ export function PracticeClient({ subject }: { subject: Subject }) {
 
   const select = (index: number) => {
     if (submitted) return;
+
     if (question.type === "multiple_choice") {
-      setSelected((current) => current.includes(index) ? current.filter((item) => item !== index) : [...current, index].sort());
+      setSelected((current) =>
+        current.includes(index)
+          ? current.filter((item) => item !== index)
+          : [...current, index].sort()
+      );
     } else {
       const answer = [index];
       setSelected(answer);
@@ -84,5 +119,47 @@ export function PracticeClient({ subject }: { subject: Subject }) {
     savePracticePosition(subject, position);
   };
 
-  return <div className="mx-auto max-w-[900px] overflow-x-hidden px-5 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-8 sm:px-8 sm:pt-10"><div className="flex items-center justify-between gap-4"><Link href="/" className="focus-ring inline-flex items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"><ArrowLeft size={15} /> {t.backHome}</Link><span className="rounded-full bg-[var(--soft-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">{t.practiceMode} · 0{subject}</span></div><div className="mt-9"><ProgressBar current={position + 1} total={questions.length} label={`${t.question} ${position + 1} / ${questions.length}`} /><QuestionCard question={question} language={language} copy={t} selected={selected} submitted={submitted} showFeedback={submitted} onSelect={select} onSubmitMulti={submitMultiple} />{submitted ? <div className="mt-5 flex justify-end"><button type="button" onClick={goNext} className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5">{position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} /></button></div> : null}</div></div>;
+  return (
+    <div className="mx-auto max-w-[900px] overflow-x-hidden px-5 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-8 sm:px-8 sm:pt-10">
+      <div className="flex items-center justify-between gap-4">
+        <Link
+          href="/"
+          className="focus-ring inline-flex items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"
+        >
+          <ArrowLeft size={15} /> {t.backHome}
+        </Link>
+        <span className="rounded-full bg-[var(--soft-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">
+          {t.practiceMode} · 0{subject}
+        </span>
+      </div>
+      <div className="mt-9">
+        <ProgressBar
+          current={position + 1}
+          total={questions.length}
+          label={`${t.question} ${position + 1} / ${questions.length}`}
+        />
+        <QuestionCard
+          question={question}
+          language={language}
+          copy={t}
+          selected={selected}
+          submitted={submitted}
+          showFeedback={submitted}
+          onSelect={select}
+          onSubmitMulti={submitMultiple}
+        />
+        {submitted ? (
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              onClick={goNext}
+              className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5"
+            >
+              {position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} />
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
 }
