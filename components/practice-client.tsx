@@ -179,8 +179,8 @@ export function PracticeClient({ subject }: { subject: Subject }) {
             <p className="mt-1 text-lg font-black">{completedQuestionCount} <span className="text-sm font-bold text-[var(--muted)]">/ {trackedQuestions.length}</span></p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <form onSubmit={jumpToQuestion} className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-[#fbfcfa] p-1.5">
-              <label htmlFor="practice-question-number" className="hidden pl-2 text-[10px] font-black uppercase tracking-[0.1em] text-[var(--muted)] sm:inline">{t.jumpQuestion}</label>
+            <form onSubmit={jumpToQuestion} className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[#fbfcfa] p-2">
+              <label htmlFor="practice-question-number" className="hidden pl-2 text-xs font-black uppercase tracking-[0.1em] text-[var(--muted)] sm:inline">{t.jumpQuestion}</label>
               <input
                 id="practice-question-number"
                 type="number"
@@ -189,13 +189,13 @@ export function PracticeClient({ subject }: { subject: Subject }) {
                 value={jumpNumber}
                 onChange={(event) => setJumpNumber(event.target.value)}
                 aria-label={t.jumpQuestion}
-                className="focus-ring w-14 rounded-full border border-[var(--line)] bg-white px-2 py-1.5 text-center text-sm font-black"
+                className="focus-ring h-12 w-24 rounded-xl border border-[var(--line)] bg-white px-3 text-center text-xl font-black text-[var(--ink)] sm:w-28 sm:text-2xl"
               />
-              <span className="text-xs font-bold text-[var(--muted)]">/ {questions.length}</span>
+              <span className="text-sm font-bold text-[var(--muted)]">/ {questions.length}</span>
               <button
                 type="submit"
                 disabled={!canJumpToQuestion}
-                className="focus-ring rounded-full bg-[var(--ink)] px-3 py-2 text-xs font-black text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+                className="focus-ring rounded-xl bg-[var(--ink)] px-4 py-3 text-sm font-black text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {t.jumpButton}
               </button>
