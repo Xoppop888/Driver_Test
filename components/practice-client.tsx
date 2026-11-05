@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { QuestionCard } from "@/components/question-card";
 import { ProgressBar } from "@/components/exam-timer";
 import { copy } from "@/lib/i18n";
-import { getQuestions, type Question, type Subject } from "@/lib/questions";
+import { getQuestion, getQuestions, questionBank, type Question, type Subject } from "@/lib/questions";
 import { useStudyStore } from "@/lib/store";
 
 function sameAnswer(selected: number[], correct: number[]) {
@@ -27,7 +27,8 @@ export function PracticeClient({ subject }: { subject: Subject }) {
   const [finished, setFinished] = useState(false);
   const [mistakesOnly, setMistakesOnly] = useState(false);
   const subjectQuestions = getQuestions(subject);
-  const completedQuestionCount = subjectQuestions.filter((item) => Object.prototype.hasOwnProperty.call(progress, item.id)).length;
+  const trackedQuestions = mistakesOnly ? questionBank : subjectQuestions;
+  const completedQuestionCount = trackedQuestions.filter((item) => Object.prototype.hasOwnProperty.call(progress, item.id)).length;
 
   useEffect(() => {
     const search = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
@@ -35,10 +36,9 @@ export function PracticeClient({ subject }: { subject: Subject }) {
     const reviewMistakesOnly = search.get("mistakes") === "true";
     const allQuestions = getQuestions(subject);
     const { mistakes: currentMistakes, practicePositions } = useStudyStore.getState();
-    const filteredQuestions = reviewMistakesOnly
-      ? allQuestions.filter((question) => currentMistakes.includes(question.id))
+    const selectedQuestions: Question[] = reviewMistakesOnly
+      ? currentMistakes.map(getQuestion).filter((question): question is Question => Boolean(question))
       : allQuestions;
-    const selectedQuestions = filteredQuestions.length ? filteredQuestions : allQuestions;
     const requestedIndex = requestedId
       ? selectedQuestions.findIndex((question) => question.id === requestedId)
       : -1;
@@ -149,14 +149,14 @@ export function PracticeClient({ subject }: { subject: Subject }) {
           <ArrowLeft size={15} /> {t.backHome}
         </Link>
         <span className="rounded-full bg-[var(--soft-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">
-          {t.practiceMode} · 0{subject}
+          {t.practiceMode} · 0{question.subject}
         </span>
       </div>
       <div className="mt-9">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-white px-4 py-3 sm:px-5">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--muted)]">{t.completedQuestionProgress} · 0{subject}</p>
-            <p className="mt-1 text-lg font-black">{completedQuestionCount} <span className="text-sm font-bold text-[var(--muted)]">/ {subjectQuestions.length}</span></p>
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--muted)]">{t.completedQuestionProgress}{mistakesOnly ? "" : ` · 0${subject}`}</p>
+            <p className="mt-1 text-lg font-black">{completedQuestionCount} <span className="text-sm font-bold text-[var(--muted)]">/ {trackedQuestions.length}</span></p>
           </div>
           <button
             type="button"
