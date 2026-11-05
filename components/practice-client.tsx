@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ChevronLeft, Home, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { QuestionCard } from "@/components/question-card";
 import { ProgressBar } from "@/components/exam-timer";
 import { copy } from "@/lib/i18n";
@@ -22,6 +22,7 @@ export function PracticeClient({ subject }: { subject: Subject }) {
   const t = copy[language];
   const [questions, setQuestions] = useState<Question[]>(() => getQuestions(subject));
   const [position, setPosition] = useState(0);
+  const [jumpNumber, setJumpNumber] = useState("1");
   const [selected, setSelected] = useState<number[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -43,21 +44,29 @@ export function PracticeClient({ subject }: { subject: Subject }) {
       ? selectedQuestions.findIndex((question) => question.id === requestedId)
       : -1;
 
-    setQuestions(selectedQuestions);
-    setMistakesOnly(reviewMistakesOnly);
-    setPosition(
+    const initialPosition =
       requestedIndex >= 0
         ? requestedIndex
         : reviewMistakesOnly
           ? 0
-          : Math.min(practicePositions[String(subject)] ?? 0, Math.max(selectedQuestions.length - 1, 0)),
-    );
+          : Math.min(practicePositions[String(subject)] ?? 0, Math.max(selectedQuestions.length - 1, 0));
+
+    setQuestions(selectedQuestions);
+    setMistakesOnly(reviewMistakesOnly);
+    setPosition(initialPosition);
+    setJumpNumber(String(initialPosition + 1));
     setSelected([]);
     setSubmitted(false);
     setFinished(false);
   }, [subject]);
 
+  useEffect(() => {
+    setJumpNumber(String(position + 1));
+  }, [position]);
+
   const question = questions[position];
+  const jumpPosition = Number(jumpNumber) - 1;
+  const canJumpToQuestion = jumpNumber !== "" && Number.isInteger(jumpPosition) && jumpPosition >= 0 && jumpPosition < questions.length;
 
   if (finished || !question) {
     return (
@@ -107,9 +116,20 @@ export function PracticeClient({ subject }: { subject: Subject }) {
     setSubmitted(false);
   };
 
+  const jumpToQuestion = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canJumpToQuestion || jumpPosition === position) return;
+
+    setPosition(jumpPosition);
+    if (!mistakesOnly) savePracticePosition(subject, jumpPosition);
+    setSelected([]);
+    setSubmitted(false);
+  };
+
   const restartPractice = () => {
     if (!mistakesOnly) clearPracticePosition(subject);
     setPosition(0);
+    setJumpNumber("1");
     setSelected([]);
     setSubmitted(false);
     setFinished(false);
@@ -158,13 +178,36 @@ export function PracticeClient({ subject }: { subject: Subject }) {
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--muted)]">{t.completedQuestionProgress}{mistakesOnly ? "" : ` · 0${subject}`}</p>
             <p className="mt-1 text-lg font-black">{completedQuestionCount} <span className="text-sm font-bold text-[var(--muted)]">/ {trackedQuestions.length}</span></p>
           </div>
-          <button
-            type="button"
-            onClick={restartPractice}
-            className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2.5 text-xs font-black transition-colors hover:bg-[var(--soft-accent)]"
-          >
-            <RotateCcw size={15} /> {t.firstQuestion}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <form onSubmit={jumpToQuestion} className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-[#fbfcfa] p-1.5">
+              <label htmlFor="practice-question-number" className="hidden pl-2 text-[10px] font-black uppercase tracking-[0.1em] text-[var(--muted)] sm:inline">{t.jumpQuestion}</label>
+              <input
+                id="practice-question-number"
+                type="number"
+                min={1}
+                max={questions.length}
+                value={jumpNumber}
+                onChange={(event) => setJumpNumber(event.target.value)}
+                aria-label={t.jumpQuestion}
+                className="focus-ring w-14 rounded-full border border-[var(--line)] bg-white px-2 py-1.5 text-center text-sm font-black"
+              />
+              <span className="text-xs font-bold text-[var(--muted)]">/ {questions.length}</span>
+              <button
+                type="submit"
+                disabled={!canJumpToQuestion}
+                className="focus-ring rounded-full bg-[var(--ink)] px-3 py-2 text-xs font-black text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {t.jumpButton}
+              </button>
+            </form>
+            <button
+              type="button"
+              onClick={restartPractice}
+              className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2.5 text-xs font-black transition-colors hover:bg-[var(--soft-accent)]"
+            >
+              <RotateCcw size={15} /> {t.firstQuestion}
+            </button>
+          </div>
         </div>
         <ProgressBar
           current={position + 1}
