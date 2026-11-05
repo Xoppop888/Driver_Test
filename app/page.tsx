@@ -35,7 +35,10 @@ export default function HomePage() {
               <div className="mt-10 flex items-end gap-2"><span className="text-6xl font-black leading-none tracking-[-0.08em]">{completed}</span><span className="pb-1 text-sm font-bold text-white/55">{t.questions}</span></div>
               <div className="mt-5 h-2 rounded-full bg-white/10"><div className="h-full rounded-full bg-[var(--gold)]" style={{ width: `${Math.min(completed / 8, 1) * 100}%` }} /></div>
               <p className="mt-4 max-w-xs text-sm font-semibold leading-relaxed text-white/65">{mistakes.length ? `${mistakes.length} ${language === "ru" ? "вопросов ждут повторения" : "questions waiting for a revisit"}` : t.mistakesEmpty}</p>
-              <Link href="/mistakes" className="focus-ring mt-7 inline-flex items-center gap-2 rounded-full bg-white px-4 py-3 text-xs font-black uppercase tracking-[0.08em] text-[var(--ink)] transition-transform hover:-translate-y-0.5">{t.navMistakes} <ArrowRight size={15} /></Link>
+              <div className="mt-7 flex flex-wrap gap-2">
+                <Link href="/mistakes" className="focus-ring inline-flex items-center gap-2 rounded-full bg-white px-4 py-3 text-xs font-black uppercase tracking-[0.08em] text-[var(--ink)] transition-transform hover:-translate-y-0.5">{t.navMistakes} <ArrowRight size={15} /></Link>
+                <Link href="/exam-history" className="focus-ring inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-3 text-xs font-black uppercase tracking-[0.08em] text-white transition-transform hover:-translate-y-0.5 hover:bg-white/10">{t.examHistory} <ArrowRight size={15} /></Link>
+              </div>
             </div>
           </div>
         </section>

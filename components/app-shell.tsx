@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, BookOpenCheck, CircleAlert } from "lucide-react";
+import { ArrowUpRight, BookOpenCheck, CircleAlert, History } from "lucide-react";
 import { useStudyStore } from "@/lib/store";
 import { copy } from "@/lib/i18n";
 import { LanguageToggle } from "./language-toggle";
+import { SponsorBadge } from "./project-promo";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -34,7 +35,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link href="/mistakes" className={`flex items-center gap-1 rounded-full px-3 py-2 transition-colors hover:bg-white ${pathname === "/mistakes" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>
                 <CircleAlert size={15} /> {t.navMistakes}
               </Link>
+              <Link href="/exam-history" className={`flex items-center gap-1 rounded-full px-3 py-2 transition-colors hover:bg-white ${pathname === "/exam-history" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>
+                <History size={15} /> {t.examHistory}
+              </Link>
             </nav>
+            <SponsorBadge />
             <LanguageToggle />
           </div>
         </div>

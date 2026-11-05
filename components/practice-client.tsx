@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Home } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, Home, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { QuestionCard } from "@/components/question-card";
 import { ProgressBar } from "@/components/exam-timer";
@@ -16,42 +16,46 @@ function sameAnswer(selected: number[], correct: number[]) {
 export function PracticeClient({ subject }: { subject: Subject }) {
   const language = useStudyStore((state) => state.language);
   const recordAnswer = useStudyStore((state) => state.recordAnswer);
+  const progress = useStudyStore((state) => state.progress);
   const savePracticePosition = useStudyStore((state) => state.savePracticePosition);
   const clearPracticePosition = useStudyStore((state) => state.clearPracticePosition);
-  const savedPosition = useStudyStore((state) => state.practicePositions[String(subject)] ?? 0);
   const t = copy[language];
   const [questions, setQuestions] = useState<Question[]>(() => getQuestions(subject));
   const [position, setPosition] = useState(0);
   const [selected, setSelected] = useState<number[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [finished, setFinished] = useState(false);
-  const [requestedQuestionId, setRequestedQuestionId] = useState<string | null>(null);
+  const [mistakesOnly, setMistakesOnly] = useState(false);
+  const subjectQuestions = getQuestions(subject);
+  const completedQuestionCount = subjectQuestions.filter((item) => Object.prototype.hasOwnProperty.call(progress, item.id)).length;
 
   useEffect(() => {
     const search = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
-    const mistakesOnly = search.get("mistakes") === "true";
     const requestedId = search.get("question");
+    const reviewMistakesOnly = search.get("mistakes") === "true";
     const allQuestions = getQuestions(subject);
-    const currentMistakes = useStudyStore.getState().mistakes;
-    const selectedQuestions = mistakesOnly
+    const { mistakes: currentMistakes, practicePositions } = useStudyStore.getState();
+    const filteredQuestions = reviewMistakesOnly
       ? allQuestions.filter((question) => currentMistakes.includes(question.id))
       : allQuestions;
+    const selectedQuestions = filteredQuestions.length ? filteredQuestions : allQuestions;
+    const requestedIndex = requestedId
+      ? selectedQuestions.findIndex((question) => question.id === requestedId)
+      : -1;
 
-    setQuestions(selectedQuestions.length ? selectedQuestions : allQuestions);
-    setRequestedQuestionId(requestedId);
-    setPosition(0);
+    setQuestions(selectedQuestions);
+    setMistakesOnly(reviewMistakesOnly);
+    setPosition(
+      requestedIndex >= 0
+        ? requestedIndex
+        : reviewMistakesOnly
+          ? 0
+          : Math.min(practicePositions[String(subject)] ?? 0, Math.max(selectedQuestions.length - 1, 0)),
+    );
     setSelected([]);
     setSubmitted(false);
     setFinished(false);
   }, [subject]);
-
-  useEffect(() => {
-    const requestedIndex = requestedQuestionId
-      ? questions.findIndex((question) => question.id === requestedQuestionId)
-      : -1;
-
-    setPosition(requestedIndex >= 0 ? requestedIndex : Math.min(savedPosition, Math.max(questions.length - 1, 0)));
-  }, [questions, requestedQuestionId, savedPosition]);
 
   const question = questions[position];
 
@@ -85,14 +89,30 @@ export function PracticeClient({ subject }: { subject: Subject }) {
 
   const goNext = () => {
     if (position >= questions.length - 1) {
-      clearPracticePosition(subject);
+      if (!mistakesOnly) clearPracticePosition(subject);
       setFinished(true);
     } else {
-      savePracticePosition(subject, position + 1);
+      if (!mistakesOnly) savePracticePosition(subject, position + 1);
       setPosition((current) => current + 1);
       setSelected([]);
       setSubmitted(false);
     }
+  };
+
+  const goPrevious = () => {
+    const previousPosition = Math.max(0, position - 1);
+    setPosition(previousPosition);
+    if (!mistakesOnly) savePracticePosition(subject, previousPosition);
+    setSelected([]);
+    setSubmitted(false);
+  };
+
+  const restartPractice = () => {
+    if (!mistakesOnly) clearPracticePosition(subject);
+    setPosition(0);
+    setSelected([]);
+    setSubmitted(false);
+    setFinished(false);
   };
 
   const select = (index: number) => {
@@ -109,14 +129,14 @@ export function PracticeClient({ subject }: { subject: Subject }) {
       setSelected(answer);
       setSubmitted(true);
       recordAnswer(question.id, sameAnswer(answer, question.correct_indices));
-      savePracticePosition(subject, position);
+      if (!mistakesOnly) savePracticePosition(subject, position);
     }
   };
 
   const submitMultiple = () => {
     setSubmitted(true);
     recordAnswer(question.id, sameAnswer(selected, question.correct_indices));
-    savePracticePosition(subject, position);
+    if (!mistakesOnly) savePracticePosition(subject, position);
   };
 
   return (
@@ -133,6 +153,19 @@ export function PracticeClient({ subject }: { subject: Subject }) {
         </span>
       </div>
       <div className="mt-9">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-white px-4 py-3 sm:px-5">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--muted)]">{t.completedQuestionProgress} · 0{subject}</p>
+            <p className="mt-1 text-lg font-black">{completedQuestionCount} <span className="text-sm font-bold text-[var(--muted)]">/ {subjectQuestions.length}</span></p>
+          </div>
+          <button
+            type="button"
+            onClick={restartPractice}
+            className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2.5 text-xs font-black transition-colors hover:bg-[var(--soft-accent)]"
+          >
+            <RotateCcw size={15} /> {t.firstQuestion}
+          </button>
+        </div>
         <ProgressBar
           current={position + 1}
           total={questions.length}
@@ -148,17 +181,25 @@ export function PracticeClient({ subject }: { subject: Subject }) {
           onSelect={select}
           onSubmitMulti={submitMultiple}
         />
-        {submitted ? (
-          <div className="mt-5 flex justify-end">
+        <div className="mt-5 flex flex-wrap justify-between gap-3">
             <button
               type="button"
-              onClick={goNext}
-              className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5"
+              onClick={goPrevious}
+              disabled={position === 0}
+              className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-white px-5 py-3.5 text-sm font-black transition-colors hover:bg-[#f3f5f1] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} />
+              <ChevronLeft size={16} /> {t.previous}
             </button>
-          </div>
-        ) : null}
+            {submitted ? (
+              <button
+                type="button"
+                onClick={goNext}
+                className="focus-ring inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-black text-white transition-transform hover:-translate-y-0.5"
+              >
+                {position === questions.length - 1 ? t.finish : t.next} <ArrowRight size={16} />
+              </button>
+            ) : null}
+        </div>
       </div>
     </div>
   );
