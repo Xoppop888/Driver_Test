@@ -161,23 +161,25 @@ export function PracticeClient({ subject }: { subject: Subject }) {
 
   return (
     <div className="mx-auto max-w-[900px] overflow-x-hidden px-5 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-8 sm:px-8 sm:pt-10">
-      <div className="flex items-center justify-between gap-4">
-        <Link
-          href="/"
-          className="focus-ring inline-flex items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"
-        >
-          <ArrowLeft size={15} /> {t.backHome}
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/"
+            className="focus-ring inline-flex items-center gap-2 rounded-full text-xs font-black uppercase tracking-[0.14em] text-[var(--muted)] transition-colors hover:text-[var(--accent)]"
+          >
+            <ArrowLeft size={15} /> {t.backHome}
+          </Link>
+          <div className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-white px-3 py-2">
+            <span className="text-[9px] font-black uppercase tracking-[0.1em] text-[var(--muted)]">{t.completedQuestionProgress}</span>
+            <span className="text-sm font-black">{completedQuestionCount}<span className="ml-1 text-xs font-bold text-[var(--muted)]">/ {trackedQuestions.length}</span></span>
+          </div>
+        </div>
         <span className="rounded-full bg-[var(--soft-accent)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">
           {t.practiceMode} · 0{question.subject}
         </span>
       </div>
       <div className="mt-9">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-white px-4 py-3 sm:px-5">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--muted)]">{t.completedQuestionProgress}{mistakesOnly ? "" : ` · 0${subject}`}</p>
-            <p className="mt-1 text-lg font-black">{completedQuestionCount} <span className="text-sm font-bold text-[var(--muted)]">/ {trackedQuestions.length}</span></p>
-          </div>
+        <div className="mb-4 flex justify-end">
           <div className="flex flex-wrap items-center gap-2">
             <form onSubmit={jumpToQuestion} className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[#fbfcfa] p-2">
               <label htmlFor="practice-question-number" className="hidden pl-2 text-xs font-black uppercase tracking-[0.1em] text-[var(--muted)] sm:inline">{t.jumpQuestion}</label>
