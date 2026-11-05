@@ -173,38 +173,6 @@ export function PracticeClient({ subject }: { subject: Subject }) {
         </span>
       </div>
       <div className="mt-9">
-        <div className="mb-4 flex justify-end">
-          <div className="flex flex-wrap items-center gap-2">
-            <form onSubmit={jumpToQuestion} className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[#fbfcfa] p-2">
-              <label htmlFor="practice-question-number" className="hidden pl-2 text-xs font-black uppercase tracking-[0.1em] text-[var(--muted)] sm:inline">{t.jumpQuestion}</label>
-              <input
-                id="practice-question-number"
-                type="number"
-                min={1}
-                max={questions.length}
-                value={jumpNumber}
-                onChange={(event) => setJumpNumber(event.target.value)}
-                aria-label={t.jumpQuestion}
-                className="focus-ring h-12 w-24 rounded-xl border border-[var(--line)] bg-white px-3 text-center text-xl font-black text-[var(--ink)] sm:w-28 sm:text-2xl"
-              />
-              <span className="text-sm font-bold text-[var(--muted)]">/ {questions.length}</span>
-              <button
-                type="submit"
-                disabled={!canJumpToQuestion}
-                className="focus-ring rounded-xl bg-[var(--ink)] px-4 py-3 text-sm font-black text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {t.jumpButton}
-              </button>
-            </form>
-            <button
-              type="button"
-              onClick={restartPractice}
-              className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-2.5 text-xs font-black transition-colors hover:bg-[var(--soft-accent)]"
-            >
-              <RotateCcw size={15} /> {t.firstQuestion}
-            </button>
-          </div>
-        </div>
         <ProgressBar
           current={position + 1}
           total={questions.length}
@@ -239,10 +207,42 @@ export function PracticeClient({ subject }: { subject: Subject }) {
               </button>
             ) : null}
         </div>
-        <div className="mt-4 flex justify-end">
-          <div className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-white px-3 py-2">
-            <span className="text-[9px] font-black uppercase tracking-[0.1em] text-[var(--muted)]">{t.completedQuestionProgress}</span>
-            <span className="text-sm font-black">{completedQuestionCount}<span className="ml-1 text-xs font-bold text-[var(--muted)]">/ {trackedQuestions.length}</span></span>
+        <div className="mt-5 rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_8px_24px_rgba(19,35,43,0.04)] sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={restartPractice}
+              className="focus-ring inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-4 py-3 text-sm font-black transition-colors hover:bg-[var(--soft-accent)]"
+            >
+              <RotateCcw size={16} /> {t.firstQuestion}
+            </button>
+            <form onSubmit={jumpToQuestion} className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[#fbfcfa] p-2">
+              <label htmlFor="practice-question-number" className="hidden pl-2 text-xs font-black uppercase tracking-[0.1em] text-[var(--muted)] sm:inline">{t.jumpQuestion}</label>
+              <input
+                id="practice-question-number"
+                type="number"
+                min={1}
+                max={questions.length}
+                value={jumpNumber}
+                onChange={(event) => setJumpNumber(event.target.value)}
+                aria-label={t.jumpQuestion}
+                className="focus-ring h-12 w-24 rounded-xl border border-[var(--line)] bg-white px-3 text-center text-xl font-black text-[var(--ink)] sm:w-28 sm:text-2xl"
+              />
+              <span className="text-sm font-bold text-[var(--muted)]">/ {questions.length}</span>
+              <button
+                type="submit"
+                disabled={!canJumpToQuestion}
+                className="focus-ring rounded-xl bg-[var(--ink)] px-4 py-3 text-sm font-black text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {t.jumpButton}
+              </button>
+            </form>
+          </div>
+          <div className="mt-4 flex justify-end border-t border-[var(--line)] pt-3">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-black uppercase tracking-[0.1em] text-[var(--muted)]">{t.completedQuestionProgress}</span>
+              <span className="text-sm font-black">{completedQuestionCount}<span className="ml-1 text-xs font-bold text-[var(--muted)]">/ {trackedQuestions.length}</span></span>
+            </div>
           </div>
         </div>
       </div>
