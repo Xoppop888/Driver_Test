@@ -141,6 +141,7 @@ export function PracticeClient({ subject }: { subject: Subject }) {
     } else {
       jumpToPosition(position + 1);
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const goPrevious = () => {
