@@ -17,12 +17,13 @@ export function SponsorBadge() {
       target="_blank"
       rel="sponsored noreferrer"
       aria-label={`${t.adLabel}: ${t.adTitle}`}
-      className="focus-ring flex shrink-0 items-center gap-2 rounded-2xl border border-[#d4c18a] bg-[#f8edc7] px-3 py-2.5 text-[var(--ink)] shadow-[0_4px_14px_rgba(75,63,31,0.08)] transition-colors hover:bg-[#f4e3ad] sm:gap-3 sm:px-4 sm:py-3"
+      title={`${t.adLabel}: ${t.adTitle}`}
+      className="focus-ring flex shrink-0 items-center gap-1.5 rounded-2xl border border-[#d4c18a] bg-[#f8edc7] px-2 py-2.5 text-[var(--ink)] shadow-[0_4px_14px_rgba(75,63,31,0.08)] transition-colors hover:bg-[#f4e3ad] sm:gap-3 sm:px-4 sm:py-3"
     >
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white/65 sm:h-10 sm:w-10">
         <Sparkles size={18} className="sm:h-5 sm:w-5" />
       </span>
-      <span className="min-w-0 leading-tight">
+      <span className="hidden min-w-0 leading-tight md:block">
         <span className="block text-[8px] font-black uppercase tracking-[0.14em] text-[var(--ink)]/55 sm:text-[9px]">{t.adLabel}</span>
         <span className="block text-xs font-black sm:text-sm">{t.adTitle}</span>
         <span className="mt-1 hidden max-w-[190px] text-[10px] font-semibold leading-snug text-[var(--ink)]/65 lg:block">{t.adText}</span>

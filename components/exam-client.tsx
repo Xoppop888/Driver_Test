@@ -41,7 +41,7 @@ export function ExamClient({ subject }: { subject: Subject }) {
     });
     const score = savedAnswers.filter((answer) => answer.correct).length;
 
-    savedAnswers.forEach((answer) => recordAnswer(answer.questionId, answer.correct));
+    savedAnswers.forEach((answer) => recordAnswer(answer.questionId, answer.correct, answer.selectedIndices, "exam"));
     saveExamAttempt({
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       subject,

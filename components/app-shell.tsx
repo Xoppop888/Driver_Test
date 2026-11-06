@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, BookOpenCheck, CircleAlert, History } from "lucide-react";
+import { ArrowUpRight, BookOpenCheck, CircleAlert, History, Home } from "lucide-react";
 import { useStudyStore } from "@/lib/store";
 import { copy } from "@/lib/i18n";
 import { LanguageToggle } from "./language-toggle";
@@ -16,7 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[var(--paper)] text-[var(--ink)]">
       <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[rgba(246,247,243,0.88)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1240px] items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
+        <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-2 px-3 py-3 sm:px-6 sm:py-4 lg:px-10">
           <Link href="/" className="focus-ring group flex items-center gap-3 rounded-2xl" aria-label={t.appName}>
             <span className="grid h-10 w-10 place-items-center rounded-[14px] bg-[var(--ink)] text-white shadow-[4px_4px_0_var(--accent)] transition-transform group-hover:-translate-y-0.5">
               <BookOpenCheck size={20} strokeWidth={2.3} />
@@ -28,15 +28,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-5">
-            <nav className="hidden items-center gap-1 text-sm font-bold sm:flex">
-              <Link href="/" className={`rounded-full px-3 py-2 transition-colors hover:bg-white ${pathname === "/" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>
-                {t.navHome}
+            <nav className="hidden items-center gap-1 text-xs font-bold sm:flex lg:text-sm">
+              <Link href="/" className={`flex items-center gap-1 rounded-full px-2 py-2 transition-colors hover:bg-white lg:px-3 ${pathname === "/" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>
+                <Home size={15} className="shrink-0 lg:hidden" /> <span className="hidden lg:inline">{t.navHome}</span>
               </Link>
-              <Link href="/mistakes" className={`flex items-center gap-1 rounded-full px-3 py-2 transition-colors hover:bg-white ${pathname === "/mistakes" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>
-                <CircleAlert size={15} /> {t.navMistakes}
+              <Link href="/mistakes" className={`flex items-center gap-1 rounded-full px-2 py-2 transition-colors hover:bg-white lg:px-3 ${pathname === "/mistakes" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`} aria-label={t.navMistakes}>
+                <CircleAlert size={15} /> <span className="hidden lg:inline">{t.navMistakes}</span>
               </Link>
-              <Link href="/exam-history" className={`flex items-center gap-1 rounded-full px-3 py-2 transition-colors hover:bg-white ${pathname === "/exam-history" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>
-                <History size={15} /> {t.examHistory}
+              <Link href="/exam-history" className={`flex items-center gap-1 rounded-full px-2 py-2 transition-colors hover:bg-white lg:px-3 ${pathname === "/exam-history" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`} aria-label={t.examHistory}>
+                <History size={15} /> <span className="hidden lg:inline">{t.examHistory}</span>
               </Link>
             </nav>
             <SponsorBadge />

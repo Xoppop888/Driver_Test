@@ -19,6 +19,9 @@ export function PracticeClient({ subject }: { subject: Subject }) {
   const progress = useStudyStore((state) => state.progress);
   const savePracticePosition = useStudyStore((state) => state.savePracticePosition);
   const clearPracticePosition = useStudyStore((state) => state.clearPracticePosition);
+  const savePracticeDraft = useStudyStore((state) => state.savePracticeDraft);
+  const saveMistakePracticePosition = useStudyStore((state) => state.saveMistakePracticePosition);
+  const clearMistakePracticePosition = useStudyStore((state) => state.clearMistakePracticePosition);
   const t = copy[language];
   const [questions, setQuestions] = useState<Question[]>(() => getQuestions(subject));
   const [position, setPosition] = useState(0);
@@ -36,7 +39,7 @@ export function PracticeClient({ subject }: { subject: Subject }) {
     const requestedId = search.get("question");
     const reviewMistakesOnly = search.get("mistakes") === "true";
     const allQuestions = getQuestions(subject);
-    const { mistakes: currentMistakes, practicePositions } = useStudyStore.getState();
+    const { mistakes: currentMistakes, practicePositions, mistakePracticePosition } = useStudyStore.getState();
     const selectedQuestions: Question[] = reviewMistakesOnly
       ? currentMistakes.map(getQuestion).filter((question): question is Question => Boolean(question))
       : allQuestions;
@@ -48,7 +51,7 @@ export function PracticeClient({ subject }: { subject: Subject }) {
       requestedIndex >= 0
         ? requestedIndex
         : reviewMistakesOnly
-          ? 0
+          ? Math.min(mistakePracticePosition, Math.max(selectedQuestions.length - 1, 0))
           : Math.min(practicePositions[String(subject)] ?? 0, Math.max(selectedQuestions.length - 1, 0));
 
     setQuestions(selectedQuestions);
@@ -67,6 +70,26 @@ export function PracticeClient({ subject }: { subject: Subject }) {
   const question = questions[position];
   const jumpPosition = Number(jumpNumber) - 1;
   const canJumpToQuestion = jumpNumber !== "" && Number.isInteger(jumpPosition) && jumpPosition >= 0 && jumpPosition < questions.length;
+
+  useEffect(() => {
+    if (!question) return;
+    const { answerHistory, practiceDrafts } = useStudyStore.getState();
+    const hasDraft = Object.prototype.hasOwnProperty.call(practiceDrafts, question.id);
+    const savedAnswer = answerHistory[question.id];
+    const restoredSelection = hasDraft
+      ? practiceDrafts[question.id] ?? []
+      : savedAnswer?.source === "practice"
+        ? savedAnswer.selectedIndices
+        : [];
+    setSelected([...restoredSelection]);
+    setSubmitted(false);
+  }, [question?.id]);
+
+  const quickNavigationStart = Math.max(0, Math.min(position - 2, questions.length - 5));
+  const quickQuestionNumbers = Array.from(
+    { length: Math.min(5, questions.length) },
+    (_, index) => quickNavigationStart + index + 1,
+  );
 
   if (finished || !question) {
     return (
@@ -96,38 +119,46 @@ export function PracticeClient({ subject }: { subject: Subject }) {
     );
   }
 
+  const savePosition = (nextPosition: number) => {
+    if (mistakesOnly) saveMistakePracticePosition(nextPosition);
+    else savePracticePosition(subject, nextPosition);
+  };
+
+  const jumpToPosition = (nextPosition: number) => {
+    if (!Number.isInteger(nextPosition) || nextPosition < 0 || nextPosition >= questions.length || nextPosition === position) return;
+    setPosition(nextPosition);
+    setJumpNumber(String(nextPosition + 1));
+    savePosition(nextPosition);
+    setSelected([]);
+    setSubmitted(false);
+  };
+
   const goNext = () => {
     if (position >= questions.length - 1) {
-      if (!mistakesOnly) clearPracticePosition(subject);
+      if (mistakesOnly) clearMistakePracticePosition();
+      else clearPracticePosition(subject);
       setFinished(true);
     } else {
-      if (!mistakesOnly) savePracticePosition(subject, position + 1);
-      setPosition((current) => current + 1);
-      setSelected([]);
-      setSubmitted(false);
+      jumpToPosition(position + 1);
     }
   };
 
   const goPrevious = () => {
-    const previousPosition = Math.max(0, position - 1);
-    setPosition(previousPosition);
-    if (!mistakesOnly) savePracticePosition(subject, previousPosition);
-    setSelected([]);
-    setSubmitted(false);
+    jumpToPosition(Math.max(0, position - 1));
   };
 
   const jumpToQuestion = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canJumpToQuestion || jumpPosition === position) return;
-
-    setPosition(jumpPosition);
-    if (!mistakesOnly) savePracticePosition(subject, jumpPosition);
-    setSelected([]);
-    setSubmitted(false);
+    const requestedNumber = Number(new FormData(event.currentTarget).get("questionNumber"));
+    const requestedPosition = requestedNumber - 1;
+    if (Number.isInteger(requestedNumber) && requestedPosition >= 0 && requestedPosition < questions.length) {
+      jumpToPosition(requestedPosition);
+    }
   };
 
   const restartPractice = () => {
-    if (!mistakesOnly) clearPracticePosition(subject);
+    if (mistakesOnly) clearMistakePracticePosition();
+    else clearPracticePosition(subject);
     setPosition(0);
     setJumpNumber("1");
     setSelected([]);
@@ -139,24 +170,25 @@ export function PracticeClient({ subject }: { subject: Subject }) {
     if (submitted) return;
 
     if (question.type === "multiple_choice") {
-      setSelected((current) =>
-        current.includes(index)
-          ? current.filter((item) => item !== index)
-          : [...current, index].sort()
-      );
+      const nextSelected = selected.includes(index)
+        ? selected.filter((item) => item !== index)
+        : [...selected, index].sort();
+      setSelected(nextSelected);
+      savePracticeDraft(question.id, nextSelected);
+      savePosition(position);
     } else {
       const answer = [index];
       setSelected(answer);
       setSubmitted(true);
-      recordAnswer(question.id, sameAnswer(answer, question.correct_indices));
-      if (!mistakesOnly) savePracticePosition(subject, position);
+      recordAnswer(question.id, sameAnswer(answer, question.correct_indices), answer, "practice");
+      savePosition(position);
     }
   };
 
   const submitMultiple = () => {
     setSubmitted(true);
-    recordAnswer(question.id, sameAnswer(selected, question.correct_indices));
-    if (!mistakesOnly) savePracticePosition(subject, position);
+    recordAnswer(question.id, sameAnswer(selected, question.correct_indices), selected, "practice");
+    savePosition(position);
   };
 
   return (
@@ -172,7 +204,7 @@ export function PracticeClient({ subject }: { subject: Subject }) {
           {t.practiceMode} · 0{question.subject}
         </span>
       </div>
-      <div className="mt-9">
+      <div className="mt-6 sm:mt-9">
         <ProgressBar
           current={position + 1}
           total={questions.length}
@@ -220,6 +252,7 @@ export function PracticeClient({ subject }: { subject: Subject }) {
               <label htmlFor="practice-question-number" className="hidden pl-2 text-xs font-black uppercase tracking-[0.1em] text-[var(--muted)] sm:inline">{t.jumpQuestion}</label>
               <input
                 id="practice-question-number"
+                name="questionNumber"
                 type="number"
                 min={1}
                 max={questions.length}
@@ -237,6 +270,21 @@ export function PracticeClient({ subject }: { subject: Subject }) {
                 {t.jumpButton}
               </button>
             </form>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 border-t border-[var(--line)] pt-4" aria-label={t.jumpQuestion}>
+            {quickQuestionNumbers.map((number) => (
+              <button
+                key={number}
+                type="button"
+                data-question-number={number}
+                aria-label={`${t.question} ${number}`}
+                aria-current={number === position + 1 ? "page" : undefined}
+                onClick={() => jumpToPosition(number - 1)}
+                className={`focus-ring grid h-10 min-w-10 place-items-center rounded-xl border px-2 text-sm font-black transition-colors ${number === position + 1 ? "border-[var(--ink)] bg-[var(--ink)] text-white" : "border-[var(--line)] bg-[#fbfcfa] hover:border-[var(--accent)] hover:bg-[var(--soft-accent)]"}`}
+              >
+                {number}
+              </button>
+            ))}
           </div>
           <div className="mt-4 flex justify-end border-t border-[var(--line)] pt-3">
             <div className="flex items-center gap-2">

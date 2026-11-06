@@ -31,10 +31,10 @@ export function QuestionCard({ question, language, copy: t, selected, submitted 
       ) : null}
       <div className="p-4 sm:p-8">
         <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
-          <span className="rounded-full bg-[var(--soft-accent)] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">
+          <span className="whitespace-nowrap rounded-full bg-[var(--soft-accent)] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--accent-dark)]">
             {question.type === "multiple_choice" ? (language === "ru" ? "Несколько ответов" : "Multiple choice") : question.type === "true_false" ? (language === "ru" ? "Верно / неверно" : "True / False") : (language === "ru" ? "Один ответ" : "Single choice")}
           </span>
-          {question.image_url ? <span className="flex min-w-0 items-center gap-1 text-right text-[11px] font-bold text-[var(--muted)]"><Check size={13} /> {language === "ru" ? "Есть изображение" : "Image ready"}</span> : <span className="flex min-w-0 items-center gap-1 text-right text-[11px] font-bold text-[var(--muted)]"><ImageOff size={13} /> {language === "ru" ? "Текстовый вопрос" : "Text question"}</span>}
+          {question.image_url ? <span className="hidden min-w-0 items-center gap-1 text-right text-[11px] font-bold text-[var(--muted)] sm:flex"><Check size={13} /> {language === "ru" ? "Есть изображение" : "Image ready"}</span> : <span className="hidden min-w-0 items-center gap-1 text-right text-[11px] font-bold text-[var(--muted)] sm:flex"><ImageOff size={13} /> {language === "ru" ? "Текстовый вопрос" : "Text question"}</span>}
         </div>
         <h2 className="max-w-3xl break-words text-[clamp(1.25rem,6vw,2.3rem)] font-black leading-[1.1] tracking-[-0.05em] text-[var(--ink)] [overflow-wrap:anywhere] sm:text-[clamp(1.45rem,3vw,2.3rem)]">{language === "ru" ? question.question_ru : question.question_en}</h2>
         {isMultiple && !isAnswered ? <p className="mt-3 text-sm font-semibold text-[var(--muted)]">{t.selectAll}</p> : null}
